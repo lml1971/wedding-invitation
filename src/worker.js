@@ -96,10 +96,12 @@ function genToken() {
   return genId() + genId();
 }
 
-/** 验证管理员密码 */
-function checkAuth(request, env) {
+/** 验证管理员密码（异步，需 await） */
+async function checkAuth(request, env) {
   const token = request.headers.get('X-Auth-Token') || '';
-  return env.WEDDING_KV?.get(`session:${token}`) === 'valid';
+  if (!token) return false;
+  const value = await env.WEDDING_KV.get(`session:${token}`);
+  return value === 'valid';
 }
 
 /** JSON 响应 */
@@ -1158,7 +1160,7 @@ export default {
 
     // 保存配置（需认证）
     if (path === '/api/config' && method === 'POST') {
-      if (!checkAuth(request, env)) return jsonResponse({ error: '未授权' }, 401);
+      if (!await checkAuth(request, env)) return jsonResponse({ error: '未授权' }, 401);
       const body = await request.json();
       await env.WEDDING_KV.put('config', JSON.stringify(body));
       return jsonResponse({ success: true });
@@ -1166,7 +1168,7 @@ export default {
 
     // 获取宾客列表（需认证）
     if (path === '/api/guests' && method === 'GET') {
-      if (!checkAuth(request, env)) return jsonResponse({ error: '未授权' }, 401);
+      if (!await checkAuth(request, env)) return jsonResponse({ error: '未授权' }, 401);
       const guests = await getGuests(env);
       for (const g of guests) {
         const rsvp = await env.WEDDING_KV.get(`rsvp:${g.id}`);
@@ -1177,7 +1179,7 @@ export default {
 
     // 添加/批量导入宾客（需认证）
     if (path === '/api/guests' && method === 'POST') {
-      if (!checkAuth(request, env)) return jsonResponse({ error: '未授权' }, 401);
+      if (!await checkAuth(request, env)) return jsonResponse({ error: '未授权' }, 401);
       const body = await request.json();
       const guests = await getGuests(env);
       let added = 0;
@@ -1196,7 +1198,7 @@ export default {
     // 删除宾客（需认证）
     const deleteMatch = path.match(/^\/api\/guests\/([a-z0-9]+)$/);
     if (deleteMatch && method === 'DELETE') {
-      if (!checkAuth(request, env)) return jsonResponse({ error: '未授权' }, 401);
+      if (!await checkAuth(request, env)) return jsonResponse({ error: '未授权' }, 401);
       const guests = await getGuests(env);
       const filtered = guests.filter(g => g.id !== deleteMatch[1]);
       await env.WEDDING_KV.put('guests', JSON.stringify(filtered));
@@ -1234,7 +1236,7 @@ export default {
 
     // 获取统计数据（需认证）
     if (path === '/api/stats' && method === 'GET') {
-      if (!checkAuth(request, env)) return jsonResponse({ error: '未授权' }, 401);
+      if (!await checkAuth(request, env)) return jsonResponse({ error: '未授权' }, 401);
       const views = parseInt(await env.WEDDING_KV.get('stat:views') || '0');
       const guests = await getGuests(env);
       let rsvpCount = 0, attendingCount = 0;
