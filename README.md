@@ -48,7 +48,7 @@ wedding-invitation/
 ## 🔧 配置说明
 
 ### 管理密码
-- 默认密码: `wedding2026`（在 `wrangler.toml` 的 `[vars]` 中修改）
+- 默认密码: `lml1971`（在 `wrangler.toml` 的 `[vars]` 中修改）
 - 生产环境建议在 Cloudflare 仪表盘设为加密变量
 
 ### CF文件库资源
