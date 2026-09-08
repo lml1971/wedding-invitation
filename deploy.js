@@ -47,6 +47,13 @@ function getCurrentKvId() {
   return match ? match[1] : null;
 }
 
+/** 检查 KV id 是否是真实ID（非占位符） */
+function isRealKvId(id) {
+  if (!id || id === PLACEHOLDER_ID) return false;
+  // 真实 KV namespace id 是32位十六进制字符串
+  return /^[a-f0-9]{32}$/i.test(id);
+}
+
 /** 更新 wrangler.toml 中的 KV id */
 function updateKvId(newId) {
   let toml = fs.readFileSync(TOML_PATH, 'utf8');
@@ -109,13 +116,13 @@ function main() {
 
   // 2. 检查/创建 KV namespace
   const currentId = getCurrentKvId();
-  if (currentId === PLACEHOLDER_ID || !currentId) {
+  if (!isRealKvId(currentId)) {
     log('检测到 KV namespace 未创建，开始自动创建...');
     const newId = createKvNamespace();
     updateKvId(newId);
     logSuccess(`KV namespace 已创建，id: ${newId}`);
   } else {
-    logSuccess(`KV namespace 已存在，id: ${currentId}`);
+    logSuccess(`KV namespace 已配置，id: ${currentId}`);
   }
 
   // 3. 安装依赖

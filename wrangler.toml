@@ -17,9 +17,9 @@ compatibility_flags = ["nodejs_compat"]
 ADMIN_PASSWORD = "wedding2026"
 
 # ================== KV Namespace ==================
-# 首次运行 npm run deploy 时，deploy.js 会自动创建并填入 id
-# 手动创建：npx wrangler kv namespace create WEDDING_KV
+# KV namespace ID（已创建，Cloudflare Pages/Workers 部署时直接使用）
+# 如需重建：npx wrangler kv namespace create WEDDING_KV
 [[kv_namespaces]]
 binding = "WEDDING_KV"
-id = "AUTO_CREATE_ME"
+id = "583c37d2a4ca473fb67309d76e8a7689"
 
