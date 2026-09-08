@@ -1,0 +1,15 @@
+{
+  "name": "wedding-invitation",
+  "version": "1.0.0",
+  "description": "婚礼请帖 - Cloudflare Worker + KV 全栈应用",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "node deploy.js",
+    "deploy:direct": "wrangler deploy",
+    "kv:create": "wrangler kv namespace create WEDDING_KV",
+    "kv:list": "wrangler kv namespace list"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}
