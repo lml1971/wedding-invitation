@@ -22,43 +22,66 @@
 // ================== 默认配置（首次部署写入KV，后续通过后台修改） ==================
 const DEFAULT_CONFIG = {
   // --- 基础信息 ---
-  groomName: '新郎',           // 新郎姓名
-  brideName: '新娘',           // 新娘姓名
-  weddingDate: '2026-10-01',   // 婚礼日期 YYYY-MM-DD
-  weddingTime: '11:30',        // 婚礼时间 HH:MM
-  venue: 'XX大酒店',           // 婚礼地点
-  address: 'XX市XX区XX路XX号',  // 详细地址
+  groomName: '新郎',           // 【可配置】新郎姓名
+  brideName: '新娘',           // 【可配置】新娘姓名
+  fatherName: '',              // 【可配置】新郎父亲姓名
+  motherName: '',              // 【可配置】新郎母亲姓名
+  weddingDate: '2026-10-01',   // 【可配置】婚礼日期 YYYY-MM-DD
+  weddingTime: '11:30',        // 【可配置】婚礼时间 HH:MM
+  lunarDate: '',               // 【可配置】农历日期（如：农历丙午年八月十九）
+  venue: 'XX大酒店',           // 【可配置】婚礼地点
+  address: 'XX市XX区XX路XX号',  // 【可配置】详细地址
+  venueDesc: '',               // 【可配置】场地描述
 
   // --- CF文件库资源 ---
-  // 背景图URL（从CF文件库调用，留空则使用默认渐变背景）
+  // 【可配置】背景图URL（从CF文件库调用，留空则使用默认渐变背景）
   bgImage: '',
-  // 背景音乐URL（从CF文件库调用，留空则不显示音乐按钮）
+  // 【可配置】背景音乐URL（从CF文件库调用，留空则不显示音乐按钮）
   bgMusic: '',
 
   // --- 统计API ---
-  // 统计表格API地址（留空则使用内置统计）
+  // 【可配置】统计表格API地址（留空则使用内置统计）
   statsApi: '',
 
   // --- 模板/主题 ---
-  template: 'classic',  // 可选: classic | elegant | modern
+  template: 'classic',  // 【可配置】可选: classic | elegant | modern
 
   // --- 功能开关 ---
   features: {
-    music: true,        // 背景音乐开关
-    bgImage: true,      // 背景图开关
-    countdown: true,   // 倒计时开关
-    rsvp: true,         // RSVP回执开关
-    stats: true,        // 统计功能开关
-    gallery: false,     // 相册开关（预留）
+    music: true,        // 【可配置】背景音乐开关
+    bgImage: true,      // 【可配置】背景图开关
+    countdown: true,   // 【可配置】倒计时开关
+    rsvp: true,         // 【可配置】RSVP回执开关
+    stats: true,        // 【可配置】统计功能开关
+    story: true,        // 【可配置】爱情故事开关
+    events: true,       // 【可配置】婚礼流程开关
+    petals: true,       // 【可配置】花瓣飘落动画
+    lanterns: true,    // 【可配置】灯笼装饰
   },
 
   // --- 文案 ---
   text: {
-    title: '我们要结婚啦',
-    intro: '诚邀您参加我们的婚礼，共同见证幸福时刻',
-    ending: '期待您的到来',
-    invitation: '诚挚邀请',
+    title: '婚礼邀请',            // 【可配置】请帖标题
+    invitation: '诚挚邀请',      // 【可配置】邀请语
+    intro: '诚邀您参加我们的婚礼，共同见证幸福时刻',  // 【可配置】介绍文案
+    ending: '期待您的到来',      // 【可配置】结尾文案
+    quote: '愿有岁月可回首，且以深情共白头',  // 【可配置】浪漫诗句
+    poem: '执子之手，与子偕老',  // 【可配置】诗句
+    invitationText: '',          // 【可配置】正式邀请信（留空使用默认模板）
   },
+
+  // --- 爱情故事（多章节） ---
+  story: [
+    { title: '初遇', content: '在街角的咖啡店，一杯热拿铁遇见了一杯蜂蜜柚子茶。' },
+    { title: '相伴', content: '清晨的粥比闹钟先醒，傍晚的风带着晚霞回家。' },
+    { title: '相守', content: '从深圳湾的月光，到忻州城的红毯，两人一屋，三餐四季。' },
+  ],
+
+  // --- 婚礼流程 ---
+  events: [
+    { title: '婚礼仪式', time: '11:30', desc: '结婚典礼正式开始' },
+    { title: '喜宴', time: '12:00', desc: '宴席开始，恭候入席' },
+  ],
 };
 
 // ================== 工具函数 ==================
@@ -76,7 +99,7 @@ function genToken() {
 /** 验证管理员密码 */
 function checkAuth(request, env) {
   const token = request.headers.get('X-Auth-Token') || '';
-  return env.ADMIN_SESSIONS?.get(`session:${token}`) === 'valid';
+  return env.WEDDING_KV?.get(`session:${token}`) === 'valid';
 }
 
 /** JSON 响应 */
@@ -111,67 +134,148 @@ function handleCORS() {
   });
 }
 
-// ================== 页面：请帖展示 ==================
+// ================== 页面：请帖展示（喜庆红金风格） ==================
 function getInvitationPage(config, guest) {
   const guestName = guest ? guest.name : '';
   const guestId = guest ? guest.id : '';
   const features = config.features || {};
 
+  // 主题配色
+  const themes = {
+    classic: { primary: '#c41e3a', gold: '#d4af37', light: '#fff8e7', dark: '#8b0000' },
+    elegant: { primary: '#8b0000', gold: '#c5a050', light: '#faf5e6', dark: '#5c0000' },
+    modern: { primary: '#e8335c', gold: '#f0c75e', light: '#fff5f5', dark: '#a01030' },
+  };
+  const tc = themes[config.template] || themes.classic;
+
   // 背景样式
   const bgStyle = features.bgImage && config.bgImage
-    ? `background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.4)), url('${config.bgImage}') center/cover no-repeat fixed;`
-    : `background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);`;
-
-  // 主题样式
-  const themeColors = {
-    classic: { primary: '#c0392b', secondary: '#e74c3c', accent: '#f1c40f', bg: '#fff5f5' },
-    elegant: { primary: '#2c3e50', secondary: '#34495e', accent: '#d4af37', bg: '#fafafa' },
-    modern: { primary: '#e91e63', secondary: '#f06292', accent: '#00bcd4', bg: '#f5f5f5' },
-  };
-  const tc = themeColors[config.template] || themeColors.classic;
+    ? `background: linear-gradient(rgba(139,0,0,0.5), rgba(196,30,58,0.4)), url('${config.bgImage}') center/cover no-repeat fixed;`
+    : `background: linear-gradient(180deg, ${tc.dark} 0%, ${tc.primary} 30%, ${tc.primary} 70%, ${tc.dark} 100%);`;
 
   // 倒计时目标
   const targetDate = `${config.weddingDate}T${config.weddingTime}:00`;
 
-  // 音乐按钮HTML
+  // 日期格式化
+  const dateParts = (config.weddingDate || '').split('-');
+  const formattedDate = dateParts.length === 3
+    ? `${dateParts[0]}年${parseInt(dateParts[1])}月${parseInt(dateParts[2])}日`
+    : config.weddingDate;
+
+  // 星期计算
+  const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+  let weekDay = '';
+  try {
+    const d = new Date(config.weddingDate);
+    weekDay = weekDays[d.getDay()] || '';
+  } catch(e) {}
+
+  // 宾客问候
+  const greeting = guestName
+    ? `<div class="guest-greeting">致 <strong>${guestName}</strong></div>`
+    : `<div class="guest-greeting">致 尊敬的宾客</div>`;
+
+  // 音乐按钮
   const musicBtn = features.music && config.bgMusic ? `
     <div id="musicBtn" class="music-btn" onclick="toggleMusic()">
       <span id="musicIcon">🔇</span>
-      <div class="music-notes" id="musicNotes">
-        <span>♪</span><span>♫</span><span>♪</span>
-      </div>
     </div>
     <audio id="bgMusic" loop preload="none">
       <source src="${config.bgMusic}" type="audio/mpeg">
     </audio>` : '';
 
-  // RSVP表单
-  const rsvpSection = features.rsvp ? `
-    <div class="rsvp-section" id="rsvpSection">
-      <h2 class="section-title" style="color: ${tc.accent};">出席回执</h2>
-      <div class="rsvp-form">
-        <select id="rsvpStatus" class="rsvp-select">
-          <option value="">请选择...</option>
-          <option value="attending">🎉 一定到场</option>
-          <option value="maybe">🤔 尽量到场</option>
-          <option value="declined">😢 无法出席</option>
-        </select>
-        <input type="number" id="rsvpCount" class="rsvp-input" placeholder="出席人数" min="1" max="10">
-        <textarea id="rsvpMessage" class="rsvp-textarea" placeholder="祝福语（选填）" rows="2"></textarea>
-        <button class="rsvp-submit" onclick="submitRSVP()" style="background: ${tc.primary};">提交回执</button>
-      </div>
-      <div id="rsvpResult" class="rsvp-result"></div>
+  // 花瓣动画
+  const petalsCanvas = features.petals ? `<canvas id="petals" class="petals-canvas"></canvas>` : '';
+
+  // 灯笼装饰
+  const lanterns = features.lanterns ? `
+    <div class="lantern lantern-left">
+      <div class="lantern-body"><span class="lantern-char">囍</span></div>
+      <div class="lantern-tassel"></div>
+    </div>
+    <div class="lantern lantern-right">
+      <div class="lantern-body"><span class="lantern-char">喜</span></div>
+      <div class="lantern-tassel"></div>
     </div>` : '';
 
-  // 宾客个性化问候
-  const greeting = guestName ? `<p class="guest-greeting">尊敬的 <strong>${guestName}</strong></p>` : '';
+  // 爱情故事
+  const storySection = features.story && config.story && config.story.length > 0 ? `
+    <section class="section story-section">
+      <div class="section-header">
+        <span class="header-line"></span>
+        <h2 class="section-title">我们的故事</h2>
+        <span class="header-line"></span>
+      </div>
+      ${config.story.map((s, i) => `
+        <div class="story-chapter" style="animation-delay: ${0.2 * i}s;">
+          <div class="chapter-num">${String(i + 1).padStart(2, '0')}</div>
+          <h3 class="chapter-title">${s.title}</h3>
+          <p class="chapter-content">${s.content}</p>
+        </div>
+      `).join('')}
+      <div class="story-signature">— ${config.groomName} &amp; ${config.brideName}</div>
+    </section>` : '';
 
-  // 统计上报（如果启用）
+  // 婚礼流程
+  const eventsSection = features.events && config.events && config.events.length > 0 ? `
+    <section class="section events-section">
+      <div class="section-header">
+        <span class="header-line"></span>
+        <h2 class="section-title">婚礼流程</h2>
+        <span class="header-line"></span>
+      </div>
+      <div class="events-list">
+        ${config.events.map(e => `
+          <div class="event-item">
+            <div class="event-time">${e.time}</div>
+            <div class="event-info">
+              <div class="event-title">${e.title}</div>
+              <div class="event-desc">${e.desc || ''}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </section>` : '';
+
+  // 邀请信
+  const invitationText = config.text.invitationText || `吾儿 ${config.groomName} 与 ${config.brideName} 女士，喜结良缘，定于公历${formattedDate}（${config.lunarDate || ''}${weekDay ? ' · ' + weekDay : ''}），在${config.venue}举行结婚典礼。届时恭请您携家人光临，同贺新婚之喜。`;
+
+  // RSVP表单
+  const rsvpSection = features.rsvp ? `
+    <section class="section rsvp-section" id="rsvpSection">
+      <div class="section-header">
+        <span class="header-line"></span>
+        <h2 class="section-title">请回复 RSVP</h2>
+        <span class="header-line"></span>
+      </div>
+      <p class="rsvp-hint">敬请于婚礼前回复，期待与您共度美好时光</p>
+      <div class="rsvp-form">
+        <div class="rsvp-row">
+          <label class="rsvp-label">是否出席</label>
+          <select id="rsvpStatus" class="rsvp-select">
+            <option value="">请选择...</option>
+            <option value="attending">🎉 一定到场</option>
+            <option value="maybe">🤔 尽量到场</option>
+            <option value="declined">😢 无法出席</option>
+          </select>
+        </div>
+        <div class="rsvp-row">
+          <label class="rsvp-label">出席人数</label>
+          <input type="number" id="rsvpCount" class="rsvp-input" placeholder="1" min="1" max="10" value="1">
+        </div>
+        <div class="rsvp-row">
+          <label class="rsvp-label">祝福语</label>
+          <textarea id="rsvpMessage" class="rsvp-textarea" placeholder="写下您的祝福（选填）" rows="3"></textarea>
+        </div>
+        <button class="rsvp-submit" onclick="submitRSVP()">提交回执</button>
+      </div>
+      <div id="rsvpResult" class="rsvp-result"></div>
+    </section>` : '';
+
+  // 统计上报
   const statsScript = features.stats ? `
     <script>
-      // 上报页面访问（内置统计）
-      fetch('/api/view', { method: 'POST' }).catch(()=>{});
-      ${guestId ? `fetch('/api/view', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({guestId:'${guestId}'}) }).catch(()=>{});` : ''}
+      fetch('/api/view', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({guestId:'${guestId}'}) }).catch(()=>{});
     </script>` : '';
 
   return `<!DOCTYPE html>
@@ -182,102 +286,246 @@ function getInvitationPage(config, guest) {
 <title>${config.text.title} - ${config.groomName} & ${config.brideName}</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --c-primary: ${tc.primary};
+  --c-gold: ${tc.gold};
+  --c-light: ${tc.light};
+  --c-dark: ${tc.dark};
+}
 body {
   ${bgStyle}
   min-height: 100vh;
-  font-family: 'Georgia', 'STKaiti', '楷体', serif;
-  color: #fff;
+  font-family: 'STKaiti', '楷体', 'KaiTi', 'Georgia', serif;
+  color: ${tc.light};
   overflow-x: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
 }
+/* 花瓣画布 */
+.petals-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+/* 灯笼 */
+.lantern { position: fixed; top: 0; z-index: 2; animation: lanternSway 4s ease-in-out infinite; }
+.lantern-left { left: 10px; }
+.lantern-right { right: 10px; animation-delay: 1s; }
+.lantern-body {
+  width: 50px; height: 60px; border-radius: 50%;
+  background: radial-gradient(circle, #ff4444, #cc0000);
+  border: 2px solid var(--c-gold);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 20px rgba(255,68,68,0.5);
+}
+.lantern-char { font-size: 1.5rem; color: var(--c-gold); font-weight: bold; }
+.lantern-tassel { width: 2px; height: 20px; background: var(--c-gold); margin: 0 auto; }
+@keyframes lanternSway { 0%,100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
 /* 主容器 */
-.container { width: 100%; max-width: 500px; padding: 2rem 1.5rem; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-/* 标题 */
-.title-section { text-align: center; margin-bottom: 2rem; animation: fadeInUp 1s ease; }
-.title-section h1 { font-size: 2.2rem; color: ${tc.accent}; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); margin-bottom: 0.5rem; letter-spacing: 2px; }
-.title-section .subtitle { font-size: 1.1rem; opacity: 0.9; }
-/* 名字 */
-.names { font-size: 3rem; font-weight: bold; margin: 1.5rem 0; text-shadow: 2px 2px 8px rgba(0,0,0,0.5); animation: fadeInUp 1.2s ease; }
-.names .and { font-size: 1.5rem; margin: 0 0.5rem; opacity: 0.7; }
-/* 日期时间 */
-.date-section { text-align: center; margin: 1.5rem 0; animation: fadeInUp 1.4s ease; }
-.date-section .date { font-size: 1.6rem; color: ${tc.accent}; }
-.date-section .time { font-size: 1.2rem; margin-top: 0.3rem; opacity: 0.9; }
+.container { position: relative; z-index: 3; max-width: 500px; margin: 0 auto; padding: 0; }
+/* 英雄区 */
+.hero {
+  min-height: 100vh; display: flex; flex-direction: column;
+  justify-content: center; align-items: center; padding: 2rem 1.5rem;
+  text-align: center;
+}
+.hero .xi-big {
+  font-size: 5rem; color: var(--c-gold); margin-bottom: 1rem;
+  text-shadow: 0 0 30px rgba(212,175,55,0.5);
+  animation: fadeInScale 1.5s ease;
+}
+.hero .subtitle { font-size: 1rem; opacity: 0.8; margin-bottom: 0.5rem; animation: fadeInUp 0.8s ease; }
+.hero h1 {
+  font-size: 2rem; color: var(--c-gold); margin-bottom: 1.5rem;
+  letter-spacing: 3px; animation: fadeInUp 1s ease;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+.guest-greeting {
+  font-size: 1.1rem; color: var(--c-gold); margin-bottom: 1.5rem;
+  animation: fadeInUp 1.2s ease;
+}
+.names-block { margin: 1rem 0 1.5rem; animation: fadeInUp 1.4s ease; }
+.names-block .name { font-size: 3rem; font-weight: bold; color: var(--c-light); text-shadow: 0 2px 15px rgba(0,0,0,0.4); }
+.names-block .heart { font-size: 1.8rem; color: var(--c-gold); margin: 0 0.8rem; display: inline-block; animation: heartBeat 1.5s infinite; }
+@keyframes heartBeat { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+.poem { font-size: 1.2rem; color: var(--c-gold); margin: 1rem 0; animation: fadeInUp 1.6s ease; }
+.date-block { margin: 1.5rem 0; animation: fadeInUp 1.8s ease; }
+.date-block .date-main { font-size: 1.4rem; color: var(--c-light); }
+.date-block .date-sub { font-size: 0.95rem; opacity: 0.7; margin-top: 0.3rem; }
+.date-block .date-time { font-size: 1.1rem; color: var(--c-gold); margin-top: 0.5rem; }
 /* 倒计时 */
-.countdown { display: flex; justify-content: center; gap: 0.8rem; margin: 1.5rem 0; animation: fadeInUp 1.6s ease; }
-.countdown-box { background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 12px; padding: 0.8rem 0.5rem; min-width: 65px; text-align: center; }
-.countdown-box .num { font-size: 1.8rem; font-weight: bold; color: ${tc.accent}; }
-.countdown-box .label { font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem; }
-/* 地点 */
-.venue-section { text-align: center; margin: 1.5rem 0; animation: fadeInUp 1.8s ease; }
-.venue-section .venue-name { font-size: 1.3rem; color: ${tc.accent}; }
-.venue-section .venue-addr { font-size: 0.9rem; opacity: 0.8; margin-top: 0.3rem; }
-/* 邀请文案 */
-.invite-text { text-align: center; margin: 1.5rem 0; font-size: 1rem; line-height: 1.8; opacity: 0.9; animation: fadeInUp 2s ease; }
-.guest-greeting { font-size: 1.1rem; text-align: center; margin-bottom: 0.5rem; color: ${tc.accent}; animation: fadeInUp 0.8s ease; }
+.countdown-block { margin: 1.5rem 0; animation: fadeInUp 2s ease; }
+.countdown-title { font-size: 0.9rem; opacity: 0.7; margin-bottom: 0.8rem; text-align: center; }
+.countdown-grid { display: flex; justify-content: center; gap: 0.6rem; }
+.countdown-box {
+  background: rgba(255,255,255,0.12); backdrop-filter: blur(10px);
+  border: 1px solid rgba(212,175,55,0.3);
+  border-radius: 10px; padding: 0.6rem 0.3rem; min-width: 60px; text-align: center;
+}
+.countdown-box .num { font-size: 1.6rem; font-weight: bold; color: var(--c-gold); }
+.countdown-box .label { font-size: 0.65rem; opacity: 0.7; margin-top: 0.1rem; }
+/* 分隔 */
+.scroll-hint { margin-top: 2rem; font-size: 0.8rem; opacity: 0.5; animation: bounce 2s infinite; }
+@keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
+/* 通用 section */
+.section { padding: 3rem 1.5rem; text-align: center; }
+.section-header { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 1.5rem; }
+.header-line { height: 1px; background: linear-gradient(90deg, transparent, var(--c-gold), transparent); flex: 1; max-width: 60px; }
+.section-title { font-size: 1.6rem; color: var(--c-gold); letter-spacing: 2px; }
+/* 邀请信 */
+.invitation-text {
+  font-size: 1rem; line-height: 2; opacity: 0.9; max-width: 380px; margin: 0 auto 1.5rem;
+  text-align: justify;
+}
+.invitation-text .highlight { color: var(--c-gold); font-weight: bold; }
+.parents-block { margin-top: 1.5rem; font-size: 1rem; }
+.parents-block .parent-row { margin: 0.3rem 0; }
+.parents-block .parent-label { font-size: 0.8rem; opacity: 0.7; }
+.parents-block .parent-name { color: var(--c-gold); font-weight: bold; margin: 0 0.3rem; }
+/* 爱情故事 */
+.story-chapter { margin: 1.5rem 0; animation: fadeInUp 1s ease; }
+.story-chapter .chapter-num {
+  font-size: 0.8rem; color: var(--c-gold); opacity: 0.5;
+  border: 1px solid var(--c-gold); border-radius: 50%;
+  width: 30px; height: 30px; line-height: 28px; margin: 0 auto 0.5rem;
+}
+.story-chapter .chapter-title { font-size: 1.2rem; color: var(--c-gold); margin-bottom: 0.5rem; }
+.story-chapter .chapter-content { font-size: 0.95rem; line-height: 1.8; opacity: 0.85; max-width: 350px; margin: 0 auto; }
+.story-signature { margin-top: 1.5rem; font-size: 0.9rem; color: var(--c-gold); opacity: 0.8; }
+/* 婚礼流程 */
+.events-list { max-width: 380px; margin: 0 auto; }
+.event-item { display: flex; align-items: center; gap: 1rem; margin: 1rem 0; text-align: left; }
+.event-time { font-size: 1.3rem; color: var(--c-gold); font-weight: bold; min-width: 60px; }
+.event-info { flex: 1; }
+.event-title { font-size: 1.1rem; color: var(--c-light); }
+.event-desc { font-size: 0.85rem; opacity: 0.7; margin-top: 0.2rem; }
+/* 场地 */
+.venue-card {
+  background: rgba(255,255,255,0.08); backdrop-filter: blur(10px);
+  border: 1px solid rgba(212,175,55,0.3); border-radius: 12px;
+  padding: 1.5rem; max-width: 380px; margin: 0 auto;
+}
+.venue-card .venue-name { font-size: 1.3rem; color: var(--c-gold); margin-bottom: 0.5rem; }
+.venue-card .venue-addr { font-size: 0.9rem; opacity: 0.7; }
+.venue-card .venue-desc-text { font-size: 0.85rem; opacity: 0.6; margin-top: 0.5rem; }
 /* RSVP */
-.rsvp-section { width: 100%; margin: 1.5rem 0; animation: fadeInUp 2.2s ease; }
-.rsvp-form { display: flex; flex-direction: column; gap: 0.8rem; }
-.rsvp-select, .rsvp-input, .rsvp-textarea { width: 100%; padding: 0.8rem; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; background: rgba(255,255,255,0.1); color: #fff; font-size: 1rem; backdrop-filter: blur(10px); }
+.rsvp-hint { font-size: 0.85rem; opacity: 0.7; margin-bottom: 1rem; }
+.rsvp-form { max-width: 380px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.8rem; }
+.rsvp-row { display: flex; flex-direction: column; gap: 0.3rem; text-align: left; }
+.rsvp-label { font-size: 0.85rem; color: var(--c-gold); }
+.rsvp-select, .rsvp-input, .rsvp-textarea {
+  width: 100%; padding: 0.7rem; border: 1px solid rgba(212,175,55,0.3);
+  border-radius: 8px; background: rgba(255,255,255,0.08); color: var(--c-light);
+  font-size: 0.95rem; font-family: inherit;
+}
 .rsvp-select option { color: #333; }
-.rsvp-textarea { resize: none; }
-.rsvp-submit { padding: 0.8rem; border: none; border-radius: 8px; color: #fff; font-size: 1.1rem; cursor: pointer; transition: transform 0.2s, opacity 0.2s; }
+.rsvp-textarea { resize: vertical; min-height: 60px; }
+.rsvp-submit {
+  padding: 0.8rem; border: none; border-radius: 8px;
+  background: linear-gradient(135deg, var(--c-primary), var(--c-dark));
+  color: var(--c-gold); font-size: 1.05rem; cursor: pointer;
+  font-family: inherit; letter-spacing: 2px; transition: transform 0.2s, opacity 0.2s;
+  border: 1px solid var(--c-gold);
+}
 .rsvp-submit:hover { transform: scale(1.02); opacity: 0.9; }
-.rsvp-result { text-align: center; margin-top: 1rem; font-size: 1rem; }
+.rsvp-result { text-align: center; margin-top: 1rem; }
+/* 页脚 */
+.footer { padding: 3rem 1.5rem 4rem; text-align: center; }
+.footer .footer-names { font-size: 1.3rem; color: var(--c-gold); margin-bottom: 0.5rem; }
+.footer .footer-date { font-size: 0.9rem; opacity: 0.7; }
+.footer .footer-quote { font-size: 1rem; color: var(--c-gold); margin-top: 1rem; opacity: 0.8; }
 /* 音乐按钮 */
-.music-btn { position: fixed; bottom: 20px; right: 20px; width: 50px; height: 50px; border-radius: 50%; background: ${tc.primary}; border: 2px solid ${tc.accent}; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.5rem; z-index: 999; box-shadow: 0 2px 10px rgba(0,0,0,0.3); transition: all 0.3s; }
-.music-btn.playing { animation: pulse 2s infinite; }
-@keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(241,196,15,0.4); } 50% { box-shadow: 0 0 0 15px rgba(241,196,15,0); } }
-.music-notes { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); pointer-events: none; opacity: 0; }
-.music-notes span { position: absolute; font-size: 1rem; color: ${tc.accent}; animation: floatNote 2s infinite; }
-.music-notes span:nth-child(1) { left: -15px; animation-delay: 0s; }
-.music-notes span:nth-child(2) { left: 0; animation-delay: 0.5s; }
-.music-notes span:nth-child(3) { left: 15px; animation-delay: 1s; }
-.music-btn.playing .music-notes { opacity: 1; }
-@keyframes floatNote { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-40px); opacity: 0; } }
+.music-btn {
+  position: fixed; bottom: 20px; right: 20px; width: 48px; height: 48px;
+  border-radius: 50%; background: var(--c-primary);
+  border: 2px solid var(--c-gold); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 1.3rem; z-index: 999;
+  box-shadow: 0 2px 15px rgba(0,0,0,0.4); transition: all 0.3s;
+}
+.music-btn.playing { animation: musicPulse 2s infinite; }
+@keyframes musicPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(212,175,55,0.4); } 50% { box-shadow: 0 0 0 12px rgba(212,175,55,0); } }
 /* 动画 */
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-/* 页脚 */
-.footer { text-align: center; padding: 2rem 0; font-size: 0.8rem; opacity: 0.6; }
+@keyframes fadeInScale { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
+/* 滚动渐入 */
+.fade-in { opacity: 0; transform: translateY(40px); transition: all 0.8s ease; }
+.fade-in.visible { opacity: 1; transform: translateY(0); }
 </style>
 </head>
 <body>
+${petalsCanvas}
+${lanterns}
 <div class="container">
-  <div class="title-section">
+  <!-- 英雄区 -->
+  <section class="hero">
+    ${greeting}
+    <div class="xi-big">囍</div>
     <p class="subtitle">${config.text.invitation || '诚挚邀请'}</p>
     <h1>${config.text.title}</h1>
-  </div>
-  ${greeting}
-  <div class="names">
-    ${config.groomName}<span class="and">&</span>${config.brideName}
-  </div>
-  ${features.countdown ? `
-  <div class="countdown" id="countdown">
-    <div class="countdown-box"><div class="num" id="cd-days">0</div><div class="label">天</div></div>
-    <div class="countdown-box"><div class="num" id="cd-hours">0</div><div class="label">时</div></div>
-    <div class="countdown-box"><div class="num" id="cd-mins">0</div><div class="label">分</div></div>
-    <div class="countdown-box"><div class="num" id="cd-secs">0</div><div class="label">秒</div></div>
-  </div>` : ''}
-  <div class="date-section">
-    <div class="date">${config.weddingDate}</div>
-    <div class="time">${config.weddingTime}</div>
-  </div>
-  <div class="venue-section">
-    <div class="venue-name">${config.venue}</div>
-    <div class="venue-addr">${config.address}</div>
-  </div>
-  <div class="invite-text">
-    <p>${config.text.intro}</p>
-    <p style="margin-top:1rem; color:${tc.accent};">${config.text.ending}</p>
-  </div>
+    <div class="names-block">
+      <span class="name">${config.groomName}</span>
+      <span class="heart">❤</span>
+      <span class="name">${config.brideName}</span>
+    </div>
+    <p class="poem">${config.text.poem || '执子之手，与子偕老'}</p>
+    <div class="date-block">
+      <div class="date-main">${formattedDate}</div>
+      ${weekDay ? `<div class="date-sub">${weekDay}</div>` : ''}
+      ${config.lunarDate ? `<div class="date-sub">${config.lunarDate}</div>` : ''}
+      <div class="date-time">${config.weddingTime}</div>
+    </div>
+    ${features.countdown ? `
+    <div class="countdown-block">
+      <div class="countdown-title">距离婚礼还有</div>
+      <div class="countdown-grid" id="countdown">
+        <div class="countdown-box"><div class="num" id="cd-days">0</div><div class="label">天</div></div>
+        <div class="countdown-box"><div class="num" id="cd-hours">0</div><div class="label">时</div></div>
+        <div class="countdown-box"><div class="num" id="cd-mins">0</div><div class="label">分</div></div>
+        <div class="countdown-box"><div class="num" id="cd-secs">0</div><div class="label">秒</div></div>
+      </div>
+    </div>` : ''}
+    <div class="scroll-hint">向下滑动 ↓</div>
+  </section>
+
+  <!-- 邀请信 -->
+  <section class="section fade-in">
+    <div class="section-header">
+      <span class="header-line"></span>
+      <h2 class="section-title">诚挚邀请</h2>
+      <span class="header-line"></span>
+    </div>
+    <p class="invitation-text">${invitationText}</p>
+    ${(config.fatherName || config.motherName) ? `
+    <div class="parents-block">
+      ${config.fatherName ? `<div class="parent-row"><span class="parent-label">父亲</span><span class="parent-name">${config.fatherName}</span>敬邀</div>` : ''}
+      ${config.motherName ? `<div class="parent-row"><span class="parent-label">母亲</span><span class="parent-name">${config.motherName}</span>敬邀</div>` : ''}
+    </div>` : ''}
+  </section>
+
+  ${storySection}
+
+  ${eventsSection}
+
+  <!-- 场地 -->
+  <section class="section fade-in">
+    <div class="section-header">
+      <span class="header-line"></span>
+      <h2 class="section-title">婚礼地点</h2>
+      <span class="header-line"></span>
+    </div>
+    <div class="venue-card">
+      <div class="venue-name">${config.venue}</div>
+      <div class="venue-addr">${config.address}</div>
+      ${config.venueDesc ? `<div class="venue-desc-text">${config.venueDesc}</div>` : ''}
+    </div>
+  </section>
+
   ${rsvpSection}
-  <div class="footer">
-    <p>${config.groomName} & ${config.brideName} 敬邀</p>
-  </div>
+
+  <!-- 页脚 -->
+  <footer class="footer">
+    <div class="footer-names">${config.groomName} &amp; ${config.brideName}</div>
+    <div class="footer-date">${formattedDate} · ${config.venue}</div>
+    <div class="footer-quote">"${config.text.quote || '愿有岁月可回首，且以深情共白头'}"</div>
+  </footer>
 </div>
+
 ${musicBtn}
+
 <script>
 // ================== 倒计时 ==================
 ${features.countdown ? `
@@ -285,18 +533,75 @@ const target = new Date('${targetDate}').getTime();
 function updateCountdown() {
   const now = Date.now();
   const diff = target - now;
-  if (diff <= 0) { document.getElementById('countdown').style.display = 'none'; return; }
+  if (diff <= 0) {
+    const el = document.getElementById('countdown');
+    if (el) el.parentElement.innerHTML = '<div class="countdown-title">婚礼进行中 🎉</div>';
+    return;
+  }
   const d = Math.floor(diff / 86400000);
   const h = Math.floor((diff % 86400000) / 3600000);
   const m = Math.floor((diff % 3600000) / 60000);
   const s = Math.floor((diff % 60000) / 1000);
-  document.getElementById('cd-days').textContent = d;
-  document.getElementById('cd-hours').textContent = h;
-  document.getElementById('cd-mins').textContent = m;
-  document.getElementById('cd-secs').textContent = s;
+  const dd = document.getElementById('cd-days'); if (dd) dd.textContent = d;
+  const hh = document.getElementById('cd-hours'); if (hh) hh.textContent = h;
+  const mm = document.getElementById('cd-mins'); if (mm) mm.textContent = m;
+  const ss = document.getElementById('cd-secs'); if (ss) ss.textContent = s;
 }
 updateCountdown();
 setInterval(updateCountdown, 1000);` : ''}
+
+// ================== 花瓣飘落动画 ==================
+${features.petals ? `
+const canvas = document.getElementById('petals');
+const ctx = canvas.getContext('2d');
+let petals = [];
+function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+function createPetal() {
+  return {
+    x: Math.random() * canvas.width,
+    y: -20,
+    size: 8 + Math.random() * 12,
+    speedY: 0.5 + Math.random() * 1.5,
+    speedX: (Math.random() - 0.5) * 0.5,
+    rotation: Math.random() * Math.PI * 2,
+    rotSpeed: (Math.random() - 0.5) * 0.02,
+    color: ['#ff6b6b', '#ee5a5a', '#ff8e8e', '#d4af37', '#ffb347'][Math.floor(Math.random()*5)],
+    opacity: 0.5 + Math.random() * 0.5,
+  };
+}
+function drawPetal(p) {
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.rotate(p.rotation);
+  ctx.globalAlpha = p.opacity;
+  ctx.fillStyle = p.color;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, p.size * 0.5, p.size, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+function animatePetals() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (petals.length < 30) petals.push(createPetal());
+  petals = petals.filter(p => {
+    p.y += p.speedY;
+    p.x += p.speedX + Math.sin(p.y * 0.01) * 0.3;
+    p.rotation += p.rotSpeed;
+    if (p.y > canvas.height + 20) return false;
+    drawPetal(p);
+    return true;
+  });
+  requestAnimationFrame(animatePetals);
+}
+animatePetals();` : ''}
+
+// ================== 滚动渐入 ==================
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.15 });
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
 
 // ================== 背景音乐 ==================
 let musicPlaying = false;
@@ -306,45 +611,41 @@ function toggleMusic() {
   const icon = document.getElementById('musicIcon');
   if (!audio) return;
   if (musicPlaying) {
-    // 渐出
     fadeAudio(audio, false, () => { audio.pause(); icon.textContent = '🔇'; btn.classList.remove('playing'); musicPlaying = false; });
   } else {
-    audio.play();
-    icon.textContent = '🔊';
-    btn.classList.add('playing');
-    musicPlaying = true;
-    // 渐入
-    fadeAudio(audio, true);
+    audio.play().then(() => {
+      icon.textContent = '🔊'; btn.classList.add('playing'); musicPlaying = true;
+      fadeAudio(audio, true);
+    }).catch(() => {});
   }
 }
-function fadeAudio(audio, fadeIn, callback) {
-  const target = fadeIn ? 0.6 : 0;
-  const start = fadeIn ? 0 : audio.volume;
-  audio.volume = start;
+function fadeAudio(audio, fadeIn, cb) {
+  const t = fadeIn ? 0.6 : 0;
+  audio.volume = fadeIn ? 0 : audio.volume;
   const step = fadeIn ? 0.02 : -0.02;
   const timer = setInterval(() => {
     audio.volume += step;
-    if (fadeIn && audio.volume >= target) { audio.volume = target; clearInterval(timer); if (callback) callback(); }
-    if (!fadeIn && audio.volume <= 0) { audio.volume = 0; clearInterval(timer); if (callback) callback(); }
+    if (fadeIn && audio.volume >= t) { audio.volume = t; clearInterval(timer); if(cb) cb(); }
+    if (!fadeIn && audio.volume <= 0) { audio.volume = 0; clearInterval(timer); if(cb) cb(); }
   }, 50);
 }
 
-// ================== RSVP 提交 ==================
+// ================== RSVP ==================
 const GUEST_ID = '${guestId}';
 function submitRSVP() {
   const status = document.getElementById('rsvpStatus').value;
   const count = document.getElementById('rsvpCount').value;
   const message = document.getElementById('rsvpMessage').value;
   const result = document.getElementById('rsvpResult');
-  if (!status) { result.innerHTML = '<span style="color:#e74c3c;">请选择出席状态</span>'; return; }
+  if (!status) { result.innerHTML = '<span style="color:#ff6b6b;">请选择出席状态</span>'; return; }
   fetch('/api/rsvp', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ guestId: GUEST_ID, status, count: parseInt(count)||1, message })
-  }).then(r => r.json()).then(data => {
-    result.innerHTML = '<span style="color:#2ecc71;">✅ 回执已提交，感谢您的回复！</span>';
+  }).then(r => r.json()).then(() => {
+    result.innerHTML = '<span style="color:#d4af37;">✅ 回执已提交，感谢您的回复！</span>';
   }).catch(() => {
-    result.innerHTML = '<span style="color:#e74c3c;">提交失败，请稍后重试</span>';
+    result.innerHTML = '<span style="color:#ff6b6b;">提交失败，请稍后重试</span>';
   });
 }
 </script>
@@ -364,7 +665,6 @@ function getAdminPage() {
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
-/* 登录页 */
 .login-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
 .login-box { background: #16213e; padding: 2.5rem; border-radius: 16px; width: 90%; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
 .login-box h1 { text-align: center; margin-bottom: 1.5rem; color: #e94560; font-size: 1.5rem; }
@@ -373,7 +673,6 @@ body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; background: #1a1a
 .login-box button { width: 100%; padding: 0.8rem; border: none; border-radius: 8px; background: #e94560; color: #fff; font-size: 1.1rem; cursor: pointer; transition: opacity 0.2s; }
 .login-box button:hover { opacity: 0.85; }
 .login-error { color: #e74c3c; text-align: center; margin-top: 0.5rem; font-size: 0.9rem; display: none; }
-/* 仪表盘 */
 .dashboard { display: none; padding: 1rem; max-width: 900px; margin: 0 auto; }
 .nav { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
 .nav button { padding: 0.6rem 1.2rem; border: none; border-radius: 8px; background: #0f3460; color: #eee; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; }
@@ -386,7 +685,6 @@ body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; background: #1a1a
 .form-group label { display: block; margin-bottom: 0.3rem; font-size: 0.9rem; color: #aaa; }
 .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 0.6rem; border: 1px solid #333; border-radius: 6px; background: #0f3460; color: #fff; font-size: 0.95rem; }
 .form-group textarea { resize: vertical; min-height: 60px; }
-/* 开关 */
 .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0; }
 .toggle-row label { font-size: 0.95rem; }
 .toggle { position: relative; width: 48px; height: 26px; }
@@ -395,34 +693,31 @@ body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; background: #1a1a
 .toggle .slider:before { content: ''; position: absolute; height: 20px; width: 20px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.3s; }
 .toggle input:checked + .slider { background: #e94560; }
 .toggle input:checked + .slider:before { transform: translateX(22px); }
-/* 按钮 */
 .btn { padding: 0.6rem 1.2rem; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: opacity 0.2s; }
 .btn-primary { background: #e94560; color: #fff; }
 .btn-success { background: #2ecc71; color: #fff; }
 .btn-danger { background: #e74c3c; color: #fff; }
+.btn-gold { background: #d4af37; color: #1a1a2e; }
 .btn:hover { opacity: 0.85; }
-/* 表格 */
 table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
 th, td { padding: 0.6rem; text-align: left; border-bottom: 1px solid #333; font-size: 0.85rem; }
 th { color: #e94560; }
 .guest-link { color: #3498db; text-decoration: none; word-break: break-all; }
-/* 统计卡片 */
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; }
 .stat-card { background: #0f3460; border-radius: 8px; padding: 1rem; text-align: center; }
 .stat-card .num { font-size: 2rem; color: #e94560; font-weight: bold; }
 .stat-card .label { font-size: 0.85rem; color: #aaa; margin-top: 0.3rem; }
-/* 提示 */
 .toast { position: fixed; top: 20px; right: 20px; padding: 1rem 1.5rem; border-radius: 8px; color: #fff; z-index: 9999; animation: slideIn 0.3s ease; }
 .toast-success { background: #2ecc71; }
 .toast-error { background: #e74c3c; }
 @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-/* 导入区域 */
 .import-area { width: 100%; min-height: 100px; padding: 0.6rem; border: 1px solid #333; border-radius: 6px; background: #0f3460; color: #fff; font-size: 0.9rem; resize: vertical; }
 .hint { font-size: 0.8rem; color: #888; margin-top: 0.3rem; }
+.add-guest-row { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.add-guest-row input { flex: 1; padding: 0.6rem; border: 1px solid #333; border-radius: 6px; background: #0f3460; color: #fff; font-size: 0.9rem; }
 </style>
 </head>
 <body>
-<!-- 登录 -->
 <div class="login-wrap" id="loginWrap">
   <div class="login-box">
     <h1>💒 婚礼请帖管理</h1>
@@ -431,34 +726,34 @@ th { color: #e94560; }
     <div class="login-error" id="loginError">密码错误，请重试</div>
   </div>
 </div>
-
-<!-- 仪表盘 -->
 <div class="dashboard" id="dashboard">
   <div class="nav">
-    <button class="nav-btn active" onclick="showPanel('config')">⚙️ 基础配置</button>
-    <button class="nav-btn" onclick="showPanel('assets')">🖼️ 资源设置</button>
-    <button class="nav-btn" onclick="showPanel('features')">🔧 功能开关</button>
-    <button class="nav-btn" onclick="showPanel('text')">📝 文案编辑</button>
-    <button class="nav-btn" onclick="showPanel('guests')">👥 宾客管理</button>
-    <button class="nav-btn" onclick="showPanel('links')">🔗 专属链接</button>
-    <button class="nav-btn" onclick="showPanel('stats')">📊 统计</button>
+    <button class="nav-btn active" data-panel="config" onclick="showPanel('config')">基础配置</button>
+    <button class="nav-btn" data-panel="assets" onclick="showPanel('assets')">资源设置</button>
+    <button class="nav-btn" data-panel="features" onclick="showPanel('features')">功能开关</button>
+    <button class="nav-btn" data-panel="text" onclick="showPanel('text')">文案编辑</button>
+    <button class="nav-btn" data-panel="guests" onclick="showPanel('guests')">宾客管理</button>
+    <button class="nav-btn" data-panel="links" onclick="showPanel('links')">专属链接</button>
+    <button class="nav-btn" data-panel="stats" onclick="showPanel('stats')">统计</button>
     <button class="nav-btn right" onclick="doLogout()">退出</button>
   </div>
 
-  <!-- 基础配置 -->
   <div class="panel active" id="panel-config">
     <h2>基础配置</h2>
     <div class="form-group"><label>新郎姓名</label><input id="cfg-groom" type="text"></div>
     <div class="form-group"><label>新娘姓名</label><input id="cfg-bride" type="text"></div>
+    <div class="form-group"><label>新郎父亲姓名</label><input id="cfg-father" type="text" placeholder="留空则不显示"></div>
+    <div class="form-group"><label>新郎母亲姓名</label><input id="cfg-mother" type="text" placeholder="留空则不显示"></div>
     <div class="form-group"><label>婚礼日期</label><input id="cfg-date" type="date"></div>
     <div class="form-group"><label>婚礼时间</label><input id="cfg-time" type="time"></div>
+    <div class="form-group"><label>农历日期</label><input id="cfg-lunar" type="text" placeholder="如：农历丙午年八月十九"></div>
     <div class="form-group"><label>婚礼地点</label><input id="cfg-venue" type="text"></div>
     <div class="form-group"><label>详细地址</label><input id="cfg-address" type="text"></div>
+    <div class="form-group"><label>场地描述</label><input id="cfg-venueDesc" type="text" placeholder="如：豪华水晶主题宴会厅"></div>
     <div class="form-group"><label>请帖模板</label><select id="cfg-template"><option value="classic">经典红金</option><option value="elegant">优雅暗金</option><option value="modern">现代粉青</option></select></div>
     <button class="btn btn-primary" onclick="saveConfig()">保存配置</button>
   </div>
 
-  <!-- 资源设置 -->
   <div class="panel" id="panel-assets">
     <h2>资源设置（CF文件库）</h2>
     <div class="form-group">
@@ -479,7 +774,6 @@ th { color: #e94560; }
     <button class="btn btn-primary" onclick="saveConfig()">保存</button>
   </div>
 
-  <!-- 功能开关 -->
   <div class="panel" id="panel-features">
     <h2>功能开关</h2>
     <div class="toggle-row"><label>🎵 背景音乐</label><label class="toggle"><input type="checkbox" id="feat-music"><span class="slider"></span></label></div>
@@ -487,50 +781,58 @@ th { color: #e94560; }
     <div class="toggle-row"><label>⏰ 倒计时</label><label class="toggle"><input type="checkbox" id="feat-countdown"><span class="slider"></span></label></div>
     <div class="toggle-row"><label>📋 RSVP回执</label><label class="toggle"><input type="checkbox" id="feat-rsvp"><span class="slider"></span></label></div>
     <div class="toggle-row"><label>📊 统计功能</label><label class="toggle"><input type="checkbox" id="feat-stats"><span class="slider"></span></label></div>
+    <div class="toggle-row"><label>📖 爱情故事</label><label class="toggle"><input type="checkbox" id="feat-story"><span class="slider"></span></label></div>
+    <div class="toggle-row"><label>📅 婚礼流程</label><label class="toggle"><input type="checkbox" id="feat-events"><span class="slider"></span></label></div>
+    <div class="toggle-row"><label>🌸 花瓣飘落</label><label class="toggle"><input type="checkbox" id="feat-petals"><span class="slider"></span></label></div>
+    <div class="toggle-row"><label>🏮 灯笼装饰</label><label class="toggle"><input type="checkbox" id="feat-lanterns"><span class="slider"></span></label></div>
     <button class="btn btn-primary" onclick="saveConfig()" style="margin-top:1rem;">保存</button>
   </div>
 
-  <!-- 文案编辑 -->
   <div class="panel" id="panel-text">
     <h2>文案编辑</h2>
     <div class="form-group"><label>请帖标题</label><input id="cfg-title" type="text"></div>
     <div class="form-group"><label>邀请语</label><input id="cfg-invitation" type="text"></div>
+    <div class="form-group"><label>诗句</label><input id="cfg-poem" type="text" placeholder="如：执子之手，与子偕老"></div>
     <div class="form-group"><label>介绍文案</label><textarea id="cfg-intro"></textarea></div>
     <div class="form-group"><label>结尾文案</label><textarea id="cfg-ending"></textarea></div>
+    <div class="form-group"><label>浪漫诗句（页脚）</label><input id="cfg-quote" type="text" placeholder="如：愿有岁月可回首，且以深情共白头"></div>
+    <div class="form-group"><label>正式邀请信（留空使用默认模板）</label><textarea id="cfg-invitationText" placeholder="留空将自动生成：吾儿 [新郎] 与 [新娘] 女士..."></textarea></div>
     <button class="btn btn-primary" onclick="saveConfig()">保存文案</button>
   </div>
 
-  <!-- 宾客管理 -->
   <div class="panel" id="panel-guests">
     <h2>宾客管理</h2>
+    <div class="add-guest-row">
+      <input id="singleGuestName" type="text" placeholder="输入单个宾客姓名">
+      <button class="btn btn-gold" onclick="addSingleGuest()">添加</button>
+    </div>
     <div class="form-group">
       <label>批量导入宾客名单（每行一个姓名，或 姓名,电话）</label>
-      <textarea class="import-area" id="guestImport" placeholder="张三&#10;李四,13800138000&#10;王五"></textarea>
+      <textarea class="import-area" id="guestImport" placeholder="张三\n李四,13800138000\n王五"></textarea>
       <div class="hint">支持从统计表格复制粘贴，每行一位宾客</div>
     </div>
-    <button class="btn btn-success" onclick="importGuests()">导入宾客</button>
+    <button class="btn btn-success" onclick="importGuests()">批量导入</button>
     <button class="btn btn-primary" onclick="loadGuests()" style="margin-left:0.5rem;">刷新列表</button>
     <table id="guestTable">
-      <thead><tr><th>姓名</th><th>电话</th><th>回执状态</th><th>操作</th></tr></thead>
+      <thead><tr><th>姓名</th><th>电话</th><th>回执状态</th><th>专属链接</th><th>操作</th></tr></thead>
       <tbody id="guestList"></tbody>
     </table>
   </div>
 
-  <!-- 专属链接 -->
   <div class="panel" id="panel-links">
     <h2>专属请帖链接</h2>
-    <button class="btn btn-success" onclick="generateAllLinks()">为所有宾客生成链接</button>
-    <button class="btn btn-primary" onclick="exportLinks()" style="margin-left:0.5rem;">导出链接列表</button>
+    <p class="hint" style="margin-bottom:1rem;">每位宾客的专属链接格式：/i/宾客ID，打开后显示个性化请帖（含宾客姓名）</p>
+    <button class="btn btn-success" onclick="refreshLinks()">刷新链接列表</button>
+    <button class="btn btn-gold" onclick="exportLinks()" style="margin-left:0.5rem;">导出链接列表</button>
     <table id="linkTable" style="margin-top:1rem;">
       <thead><tr><th>宾客</th><th>专属链接</th><th>复制</th></tr></thead>
       <tbody id="linkList"></tbody>
     </table>
   </div>
 
-  <!-- 统计 -->
   <div class="panel" id="panel-stats">
     <h2>访问统计</h2>
-    <div class="stats-grid" id="statsGrid">
+    <div class="stats-grid">
       <div class="stat-card"><div class="num" id="stat-views">0</div><div class="label">总访问量</div></div>
       <div class="stat-card"><div class="num" id="stat-guests">0</div><div class="label">宾客总数</div></div>
       <div class="stat-card"><div class="num" id="stat-rsvp">0</div><div class="label">已回执</div></div>
@@ -549,6 +851,7 @@ let guestsData = [];
 // ================== 登录 ==================
 function doLogin() {
   const pwd = document.getElementById('pwdInput').value;
+  if (!pwd) { document.getElementById('loginError').textContent = '请输入密码'; document.getElementById('loginError').style.display = 'block'; return; }
   fetch('/api/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -557,12 +860,9 @@ function doLogin() {
     if (data.token) {
       AUTH_TOKEN = data.token;
       localStorage.setItem('adminToken', AUTH_TOKEN);
-      document.getElementById('loginWrap').style.display = 'none';
-      document.getElementById('dashboard').style.display = 'block';
-      loadConfig();
-      loadGuests();
-      loadStats();
+      showDashboard();
     } else {
+      document.getElementById('loginError').textContent = data.error || '密码错误';
       document.getElementById('loginError').style.display = 'block';
     }
   }).catch(() => {
@@ -571,23 +871,23 @@ function doLogin() {
   });
 }
 
+function showDashboard() {
+  document.getElementById('loginWrap').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  loadConfig();
+  loadGuests();
+  loadStats();
+}
+
 function doLogout() {
   AUTH_TOKEN = '';
   localStorage.removeItem('adminToken');
   location.reload();
 }
 
-// 自动登录（token缓存在localStorage）
 window.addEventListener('load', () => {
   const saved = localStorage.getItem('adminToken');
-  if (saved) {
-    AUTH_TOKEN = saved;
-    document.getElementById('loginWrap').style.display = 'none';
-    document.getElementById('dashboard').style.display = 'block';
-    loadConfig();
-    loadGuests();
-    loadStats();
-  }
+  if (saved) { AUTH_TOKEN = saved; showDashboard(); }
 });
 
 // ================== 面板切换 ==================
@@ -595,8 +895,9 @@ function showPanel(name) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('panel-' + name).classList.add('active');
-  event.target.classList.add('active');
-  if (name === 'links') loadLinks();
+  const btn = document.querySelector('.nav-btn[data-panel="' + name + '"]');
+  if (btn) btn.classList.add('active');
+  if (name === 'links') refreshLinks();
   if (name === 'stats') loadStats();
 }
 
@@ -606,24 +907,36 @@ function loadConfig() {
     currentConfig = data;
     document.getElementById('cfg-groom').value = data.groomName || '';
     document.getElementById('cfg-bride').value = data.brideName || '';
+    document.getElementById('cfg-father').value = data.fatherName || '';
+    document.getElementById('cfg-mother').value = data.motherName || '';
     document.getElementById('cfg-date').value = data.weddingDate || '';
     document.getElementById('cfg-time').value = data.weddingTime || '';
+    document.getElementById('cfg-lunar').value = data.lunarDate || '';
     document.getElementById('cfg-venue').value = data.venue || '';
     document.getElementById('cfg-address').value = data.address || '';
+    document.getElementById('cfg-venueDesc').value = data.venueDesc || '';
     document.getElementById('cfg-template').value = data.template || 'classic';
     document.getElementById('cfg-bgImage').value = data.bgImage || '';
     document.getElementById('cfg-bgMusic').value = data.bgMusic || '';
     document.getElementById('cfg-statsApi').value = data.statsApi || '';
-    document.getElementById('cfg-title').value = (data.text && data.text.title) || '';
-    document.getElementById('cfg-invitation').value = (data.text && data.text.invitation) || '';
-    document.getElementById('cfg-intro').value = (data.text && data.text.intro) || '';
-    document.getElementById('cfg-ending').value = (data.text && data.text.ending) || '';
+    const t = data.text || {};
+    document.getElementById('cfg-title').value = t.title || '';
+    document.getElementById('cfg-invitation').value = t.invitation || '';
+    document.getElementById('cfg-poem').value = t.poem || '';
+    document.getElementById('cfg-intro').value = t.intro || '';
+    document.getElementById('cfg-ending').value = t.ending || '';
+    document.getElementById('cfg-quote').value = t.quote || '';
+    document.getElementById('cfg-invitationText').value = t.invitationText || '';
     const f = data.features || {};
     document.getElementById('feat-music').checked = f.music !== false;
     document.getElementById('feat-bgImage').checked = f.bgImage !== false;
     document.getElementById('feat-countdown').checked = f.countdown !== false;
     document.getElementById('feat-rsvp').checked = f.rsvp !== false;
     document.getElementById('feat-stats').checked = f.stats !== false;
+    document.getElementById('feat-story').checked = f.story !== false;
+    document.getElementById('feat-events').checked = f.events !== false;
+    document.getElementById('feat-petals').checked = f.petals !== false;
+    document.getElementById('feat-lanterns').checked = f.lanterns !== false;
   }).catch(() => showToast('加载配置失败', 'error'));
 }
 
@@ -631,10 +944,14 @@ function saveConfig() {
   const config = {
     groomName: document.getElementById('cfg-groom').value,
     brideName: document.getElementById('cfg-bride').value,
+    fatherName: document.getElementById('cfg-father').value,
+    motherName: document.getElementById('cfg-mother').value,
     weddingDate: document.getElementById('cfg-date').value,
     weddingTime: document.getElementById('cfg-time').value,
+    lunarDate: document.getElementById('cfg-lunar').value,
     venue: document.getElementById('cfg-venue').value,
     address: document.getElementById('cfg-address').value,
+    venueDesc: document.getElementById('cfg-venueDesc').value,
     template: document.getElementById('cfg-template').value,
     bgImage: document.getElementById('cfg-bgImage').value,
     bgMusic: document.getElementById('cfg-bgMusic').value,
@@ -642,8 +959,11 @@ function saveConfig() {
     text: {
       title: document.getElementById('cfg-title').value,
       invitation: document.getElementById('cfg-invitation').value,
+      poem: document.getElementById('cfg-poem').value,
       intro: document.getElementById('cfg-intro').value,
       ending: document.getElementById('cfg-ending').value,
+      quote: document.getElementById('cfg-quote').value,
+      invitationText: document.getElementById('cfg-invitationText').value,
     },
     features: {
       music: document.getElementById('feat-music').checked,
@@ -651,9 +971,12 @@ function saveConfig() {
       countdown: document.getElementById('feat-countdown').checked,
       rsvp: document.getElementById('feat-rsvp').checked,
       stats: document.getElementById('feat-stats').checked,
+      story: document.getElementById('feat-story').checked,
+      events: document.getElementById('feat-events').checked,
+      petals: document.getElementById('feat-petals').checked,
+      lanterns: document.getElementById('feat-lanterns').checked,
     }
   };
-  // 合并当前配置（保留未在面板显示的字段）
   Object.assign(currentConfig, config);
   fetch('/api/config', {
     method: 'POST',
@@ -665,6 +988,27 @@ function saveConfig() {
 }
 
 // ================== 宾客管理 ==================
+// 添加单个宾客
+function addSingleGuest() {
+  const input = document.getElementById('singleGuestName');
+  const name = input.value.trim();
+  if (!name) { showToast('请输入宾客姓名', 'error'); return; }
+  fetch('/api/guests', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Auth-Token': AUTH_TOKEN },
+    body: JSON.stringify({ guests: [{ name: name, phone: '' }] })
+  }).then(r => r.json()).then(data => {
+    if (data.success) {
+      showToast('已添加宾客：' + name + '，链接：' + location.origin + '/i/' + data.guestIds[0], 'success');
+      input.value = '';
+      loadGuests();
+    } else {
+      showToast('添加失败', 'error');
+    }
+  }).catch(() => showToast('添加失败', 'error'));
+}
+
+// 批量导入
 function importGuests() {
   const text = document.getElementById('guestImport').value.trim();
   if (!text) { showToast('请输入宾客名单', 'error'); return; }
@@ -678,7 +1022,7 @@ function importGuests() {
     headers: { 'Content-Type': 'application/json', 'X-Auth-Token': AUTH_TOKEN },
     body: JSON.stringify({ guests })
   }).then(r => r.json()).then(data => {
-    showToast('导入 ' + data.added + ' 位宾客', 'success');
+    showToast('导入 ' + data.added + ' 位宾客成功', 'success');
     document.getElementById('guestImport').value = '';
     loadGuests();
   }).catch(() => showToast('导入失败', 'error'));
@@ -689,11 +1033,15 @@ function loadGuests() {
     .then(r => r.json()).then(data => {
       guestsData = data.guests || [];
       const list = document.getElementById('guestList');
-      list.innerHTML = guestsData.map(g => {
-        const rsvpText = g.rsvp ? ({attending:'🎉到场', maybe:'🤔待定', declined:'😊不出席'}[g.rsvp] || '-') : '未回复';
-        return '<tr><td>' + g.name + '</td><td>' + (g.phone || '-') + '</td><td>' + rsvpText + '</td><td><button class="btn btn-danger" onclick="deleteGuest(\\'' + g.id + '\\')">删除</button></td></tr>';
+      const base = location.origin + '/i/';
+      list.innerHTML = guestsData.map(function(g) {
+        const rsvpText = g.rsvp ? ({attending:'到场', maybe:'待定', declined:'不出席'}[g.rsvp] || '-') : '未回复';
+        const url = base + g.id;
+        return '<tr><td>' + g.name + '</td><td>' + (g.phone || '-') + '</td><td>' + rsvpText + '</td>'
+          + '<td><a class="guest-link" href="' + url + '" target="_blank">查看请帖</a></td>'
+          + '<td><button class="btn btn-danger" onclick="deleteGuest(\\'' + g.id + '\\')">删除</button></td></tr>';
       }).join('');
-    }).catch(() => showToast('加载宾客失败', 'error'));
+    }).catch(function() { showToast('加载宾客失败', 'error'); });
 }
 
 function deleteGuest(id) {
@@ -704,37 +1052,36 @@ function deleteGuest(id) {
 }
 
 // ================== 专属链接 ==================
-function loadLinks() {
+function refreshLinks() {
   fetch('/api/guests', { headers: { 'X-Auth-Token': AUTH_TOKEN } })
     .then(r => r.json()).then(data => {
       guestsData = data.guests || [];
       const list = document.getElementById('linkList');
       const base = location.origin + '/i/';
-      list.innerHTML = guestsData.map(g => {
+      list.innerHTML = guestsData.map(function(g) {
         const url = base + g.id;
-        return '<tr><td>' + g.name + '</td><td><a class="guest-link" href="' + url + '" target="_blank">' + url + '</a></td><td><button class="btn btn-primary" onclick="copyLink(\\'' + url + '\\')">复制</button></td></tr>';
+        return '<tr><td>' + g.name + '</td>'
+          + '<td><a class="guest-link" href="' + url + '" target="_blank">' + url + '</a></td>'
+          + '<td><button class="btn btn-primary" onclick="copyLink(\\'' + url + '\\')">复制</button></td></tr>';
       }).join('');
-    }).catch(() => showToast('加载失败', 'error'));
-}
-
-function generateAllLinks() {
-  loadLinks();
-  showToast('链接已生成', 'success');
+    }).catch(function() { showToast('加载失败', 'error'); });
 }
 
 function exportLinks() {
   const base = location.origin + '/i/';
-  const lines = guestsData.map(g => g.name + '\\t' + base + g.id);
-  const csv = '姓名\\t专属链接\\n' + lines.join('\\n');
-  const blob = new Blob([csv], { type: 'text/plain' });
-  const a = document.createElement('a');
+  if (guestsData.length === 0) { showToast('请先导入宾客', 'error'); return; }
+  var lines = guestsData.map(function(g) { return g.name + '\\t' + base + g.id; });
+  var content = '姓名\\t专属链接\\n' + lines.join('\\n');
+  var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'guest-links.txt';
   a.click();
+  showToast('已导出 ' + guestsData.length + ' 条链接', 'success');
 }
 
 function copyLink(url) {
-  navigator.clipboard.writeText(url).then(() => showToast('已复制', 'success'));
+  navigator.clipboard.writeText(url).then(function() { showToast('链接已复制', 'success'); });
 }
 
 // ================== 统计 ==================
@@ -748,13 +1095,13 @@ function loadStats() {
     }).catch(() => showToast('加载统计失败', 'error'));
 }
 
-// ================== Toast 提示 ==================
+// ================== Toast ==================
 function showToast(msg, type) {
-  const t = document.createElement('div');
+  var t = document.createElement('div');
   t.className = 'toast toast-' + (type || 'success');
   t.textContent = msg;
   document.body.appendChild(t);
-  setTimeout(() => t.remove(), 2500);
+  setTimeout(function() { t.remove(); }, 3000);
 }
 </script>
 </body>
@@ -773,10 +1120,12 @@ export default {
 
     // ================== 页面路由 ==================
 
-    // 请帖页面（根路径或 /i/:guestId）
+    // 请帖页面（根路径）
     if ((path === '/' || path === '/index.html') && method === 'GET') {
       return await serveInvitation(env, null);
     }
+
+    // 专属请帖页面（/i/:guestId）
     const guestMatch = path.match(/^\/i\/([a-z0-9]+)$/);
     if (guestMatch && method === 'GET') {
       return await serveInvitation(env, guestMatch[1]);
@@ -792,10 +1141,9 @@ export default {
     // 登录
     if (path === '/api/login' && method === 'POST') {
       const body = await request.json();
-      const adminPwd = env.ADMIN_PASSWORD || 'admin123'; // 【可配置】默认管理密码，建议通过环境变量修改
+      const adminPwd = env.ADMIN_PASSWORD || 'wedding2026'; // 【可配置】默认管理密码
       if (body.password === adminPwd) {
         const token = genToken();
-        // 存储 session（24小时过期）
         await env.WEDDING_KV.put(`session:${token}`, 'valid', { expirationTtl: 86400 });
         return jsonResponse({ success: true, token });
       }
@@ -820,7 +1168,6 @@ export default {
     if (path === '/api/guests' && method === 'GET') {
       if (!checkAuth(request, env)) return jsonResponse({ error: '未授权' }, 401);
       const guests = await getGuests(env);
-      // 附带 RSVP 信息
       for (const g of guests) {
         const rsvp = await env.WEDDING_KV.get(`rsvp:${g.id}`);
         if (rsvp) g.rsvp = JSON.parse(rsvp).status;
@@ -828,19 +1175,22 @@ export default {
       return jsonResponse({ guests });
     }
 
-    // 批量导入宾客（需认证）
+    // 添加/批量导入宾客（需认证）
     if (path === '/api/guests' && method === 'POST') {
       if (!checkAuth(request, env)) return jsonResponse({ error: '未授权' }, 401);
       const body = await request.json();
       const guests = await getGuests(env);
       let added = 0;
+      const guestIds = [];
       for (const g of (body.guests || [])) {
+        if (!g.name) continue; // 跳过无名字的行
         const id = genId();
         guests.push({ id, name: g.name, phone: g.phone || '' });
+        guestIds.push(id);
         added++;
       }
       await env.WEDDING_KV.put('guests', JSON.stringify(guests));
-      return jsonResponse({ success: true, added });
+      return jsonResponse({ success: true, added, guestIds });
     }
 
     // 删除宾客（需认证）
@@ -856,7 +1206,8 @@ export default {
 
     // RSVP 提交（公开）
     if (path === '/api/rsvp' && method === 'POST') {
-      const body = await request.json();
+      let body = {};
+      try { body = await request.json(); } catch(e) {}
       if (body.guestId) {
         await env.WEDDING_KV.put(`rsvp:${body.guestId}`, JSON.stringify({
           status: body.status,
@@ -870,12 +1221,13 @@ export default {
 
     // 访问统计上报（公开）
     if (path === '/api/view' && method === 'POST') {
-      const body = await request.json?.() || {};
+      let body = {};
+      try { body = await request.json(); } catch(e) {}
       const views = parseInt(await env.WEDDING_KV.get('stat:views') || '0') + 1;
       await env.WEDDING_KV.put('stat:views', String(views));
       if (body.guestId) {
-        const guestViews = parseInt(await env.WEDDING_KV.get(`stat:view:${body.guestId}`) || '0') + 1;
-        await env.WEDDING_KV.put(`stat:view:${body.guestId}`, String(guestViews));
+        const gv = parseInt(await env.WEDDING_KV.get(`stat:view:${body.guestId}`) || '0') + 1;
+        await env.WEDDING_KV.put(`stat:view:${body.guestId}`, String(gv));
       }
       return jsonResponse({ success: true });
     }
@@ -894,21 +1246,11 @@ export default {
           if (r.status === 'attending') attendingCount += r.count || 1;
         }
       }
-      // 如果配置了外部统计API，也可以在这里调用
-      const config = await getConfig(env);
-      let externalStats = null;
-      if (config.statsApi) {
-        try {
-          const resp = await fetch(config.statsApi);
-          externalStats = await resp.json();
-        } catch (e) { /* 外部API不可用，忽略 */ }
-      }
       return jsonResponse({
         views,
         guestCount: guests.length,
         rsvpCount,
         attendingCount,
-        externalStats,
       });
     }
 
@@ -926,7 +1268,9 @@ async function getConfig(env) {
     await env.WEDDING_KV.put('config', JSON.stringify(DEFAULT_CONFIG));
     return DEFAULT_CONFIG;
   }
-  return JSON.parse(config);
+  const parsed = JSON.parse(config);
+  // 合并默认值（确保新增字段有值）
+  return { ...DEFAULT_CONFIG, ...parsed, features: { ...DEFAULT_CONFIG.features, ...(parsed.features || {}) }, text: { ...DEFAULT_CONFIG.text, ...(parsed.text || {}) } };
 }
 
 /** 获取宾客列表 */
