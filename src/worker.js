@@ -355,8 +355,8 @@ function getInvitationPage(config, guest, requestUrl) {
 
   // 音乐按钮
   const musicBtn = features.music && config.bgMusic ? `
-    <div id="musicBtn" class="music-btn" onclick="toggleMusic()">
-      <span id="musicIcon">🔇</span>
+    <div id="musicBtn" class="music-btn" onclick="toggleMusic()" title="点击播放/暂停音乐">
+      <span id="musicIcon">🎵</span>
     </div>
     <audio id="bgMusic" loop preload="none">
       <source src="${config.bgMusic}" type="audio/mpeg">
@@ -721,13 +721,16 @@ body {
 .footer .footer-quote { font-size: 1rem; color: var(--c-gold); margin-top: 1rem; opacity: 0.8; }
 /* 音乐按钮 */
 .music-btn {
-  position: fixed; bottom: 20px; right: 20px; width: 48px; height: 48px;
+  position: fixed; top: 18px; right: 18px; width: 50px; height: 50px;
   border-radius: 50%; background: var(--c-primary);
   border: 2px solid var(--c-gold); display: flex; align-items: center; justify-content: center;
-  cursor: pointer; font-size: 1.3rem; z-index: 999;
+  cursor: pointer; font-size: 1.4rem; z-index: 999;
   box-shadow: 0 2px 15px rgba(0,0,0,0.4); transition: all 0.3s;
+  color: var(--c-gold);
 }
-.music-btn.playing { animation: musicPulse 2s infinite; }
+.music-btn:hover { transform: scale(1.1); border-color: #fff; }
+.music-btn.playing { animation: musicSpin 3s linear infinite, musicPulse 2s infinite; }
+@keyframes musicSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes musicPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(212,175,55,0.4); } 50% { box-shadow: 0 0 0 12px rgba(212,175,55,0); } }
 /* 动画 */
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
@@ -904,10 +907,10 @@ function toggleMusic() {
   const icon = document.getElementById('musicIcon');
   if (!audio) return;
   if (musicPlaying) {
-    fadeAudio(audio, false, () => { audio.pause(); icon.textContent = '🔇'; btn.classList.remove('playing'); musicPlaying = false; });
+    fadeAudio(audio, false, () => { audio.pause(); btn.classList.remove('playing'); musicPlaying = false; });
   } else {
     audio.play().then(() => {
-      icon.textContent = '🔊'; btn.classList.add('playing'); musicPlaying = true;
+      btn.classList.add('playing'); musicPlaying = true;
       fadeAudio(audio, true);
     }).catch(() => {});
   }
