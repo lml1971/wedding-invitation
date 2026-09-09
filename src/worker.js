@@ -40,6 +40,8 @@ const DEFAULT_CONFIG = {
   bgImage: '',
   // 【可配置】背景音乐URL（从CF文件库调用，留空则不显示音乐按钮）
   bgMusic: '',
+  // 【可配置】分享LOGO图片（base64编码或URL，留空使用默认囍字LOGO）
+  logoImage: '',
 
   // --- 统计API ---
   // 【可配置】统计表格API地址（留空则使用内置统计）
@@ -296,10 +298,20 @@ function handleCORS() {
 }
 
 // ================== 页面：请帖展示（喜庆红金风格） ==================
-function getInvitationPage(config, guest) {
+function getInvitationPage(config, guest, requestUrl) {
   const guestName = guest ? guest.name : '';
   const guestId = guest ? guest.id : '';
   const features = config.features || {};
+
+  // 构造分享 LOGO 的绝对 URL
+  const baseUrl = requestUrl ? new URL(requestUrl).origin : '';
+  const logoUrl = baseUrl + '/img/logo';
+
+  // 分享标题和描述
+  const shareTitle = guestName
+    ? `${config.groomName} & ${config.brideName}的婚礼邀请函 - 致${guestName}`
+    : `${config.groomName} & ${config.brideName}的婚礼邀请函`;
+  const shareDesc = config.text.intro || `诚挚邀请您参加${config.groomName}与${config.brideName}的婚礼`;
 
   // 主题配色
   const themes = {
@@ -460,7 +472,20 @@ function getInvitationPage(config, guest) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>${config.text.title} - ${config.groomName} & ${config.brideName}</title>
+<title>${shareTitle}</title>
+<!-- 微信/朋友圈分享 meta 标签（SSR注入，微信爬虫不执行JS） -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="${shareTitle}">
+<meta property="og:description" content="${shareDesc}">
+<meta property="og:image" content="${logoUrl}">
+<meta property="og:url" content="${baseUrl}${guestId ? '/i/' + guestId : '/'}">
+<meta name="description" content="${shareDesc}">
+<!-- 微信分享专用 -->
+<meta name="wximage" content="${logoUrl}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${shareTitle}">
+<meta name="twitter:description" content="${shareDesc}">
+<meta name="twitter:image" content="${logoUrl}">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
@@ -1054,6 +1079,19 @@ th { color: #e94560; }
   <div class="panel" id="panel-assets">
     <h2>资源设置（CF文件库）</h2>
     <div class="form-group">
+      <label>喜帖分享LOGO</label>
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <img id="logoPreview" style="width:80px;height:80px;border-radius:8px;border:2px solid #333;background:#0f3460;object-fit:cover;" alt="LOGO预览">
+        <div>
+          <input type="file" id="logoUpload" accept="image/*" style="display:none;" onchange="handleLogoUpload(this)">
+          <button class="btn btn-gold" onclick="document.getElementById('logoUpload').click()">上传LOGO</button>
+          <button class="btn btn-danger" onclick="clearLogo()" style="margin-left:0.5rem;">清除</button>
+        </div>
+      </div>
+      <div class="hint">上传图片作为微信分享时的LOGO（建议300x300或500x400）。未上传时使用默认囍字LOGO。</div>
+      <input id="cfg-logoImage" type="hidden">
+    </div>
+    <div class="form-group">
       <label>背景图 URL</label>
       <input id="cfg-bgImage" type="text" placeholder="https://wj.lmlcyp.ccwu.cc/JPG/your-photo.jpg">
       <div class="hint">从CF文件库获取直链，填入完整URL。留空使用默认渐变背景。</div>
@@ -1310,6 +1348,28 @@ function syncEventTimeToWedding() {
   });
 }
 
+// ================== LOGO 上传管理 ==================
+function handleLogoUpload(input) {
+  var file = input.files[0];
+  if (!file) return;
+  if (file.size > 512 * 1024) { showToast('图片过大，请压缩到512KB以下', 'error'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var base64 = e.target.result;
+    document.getElementById('cfg-logoImage').value = base64;
+    document.getElementById('logoPreview').src = base64;
+    showToast('LOGO已加载，点击保存生效', 'success');
+  };
+  reader.onerror = function() { showToast('读取图片失败', 'error'); };
+  reader.readAsDataURL(file);
+}
+
+function clearLogo() {
+  document.getElementById('cfg-logoImage').value = '';
+  document.getElementById('logoPreview').src = '/img/logo';
+  showToast('LOGO已清除，将使用默认囍字LOGO', 'success');
+}
+
 // ================== 配置管理 ==================
 function loadConfig() {
   fetch('/api/config').then(r => r.json()).then(data => {
@@ -1332,6 +1392,10 @@ function loadConfig() {
     document.getElementById('cfg-bgImage').value = data.bgImage || '';
     document.getElementById('cfg-bgMusic').value = data.bgMusic || '';
     document.getElementById('cfg-statsApi').value = data.statsApi || '';
+    // LOGO 加载
+    var logoVal = data.logoImage || '';
+    document.getElementById('cfg-logoImage').value = logoVal;
+    document.getElementById('logoPreview').src = logoVal || '/img/logo';
     const t = data.text || {};
     document.getElementById('cfg-title').value = t.title || '';
     document.getElementById('cfg-invitation').value = t.invitation || '';
@@ -1374,6 +1438,7 @@ function saveConfig() {
     template: document.getElementById('cfg-template').value,
     bgImage: document.getElementById('cfg-bgImage').value,
     bgMusic: document.getElementById('cfg-bgMusic').value,
+    logoImage: document.getElementById('cfg-logoImage').value,
     statsApi: document.getElementById('cfg-statsApi').value,
     text: {
       title: document.getElementById('cfg-title').value,
@@ -1658,18 +1723,23 @@ export default {
 
     // 请帖页面（根路径）
     if ((path === '/' || path === '/index.html') && method === 'GET') {
-      return await serveInvitation(env, null);
+      return await serveInvitation(env, null, request.url);
     }
 
     // 专属请帖页面（/i/:guestId）
     const guestMatch = path.match(/^\/i\/([a-z0-9]+)$/);
     if (guestMatch && method === 'GET') {
-      return await serveInvitation(env, guestMatch[1]);
+      return await serveInvitation(env, guestMatch[1], request.url);
     }
 
     // 管理后台页面
     if ((path === '/admin' || path === '/admin/') && method === 'GET') {
       return htmlResponse(getAdminPage());
+    }
+
+    // LOGO图片接口 — 供微信分享 og:image 使用
+    if (path === '/img/logo' && method === 'GET') {
+      return await serveLogo(env);
     }
 
     // ================== API 路由 ==================
@@ -1816,13 +1886,42 @@ async function getGuests(env) {
 }
 
 /** 返回请帖页面 */
-async function serveInvitation(env, guestId) {
+async function serveInvitation(env, guestId, requestUrl) {
   const config = await getConfig(env);
   let guest = null;
   if (guestId) {
     const guests = await getGuests(env);
     guest = guests.find(g => g.id === guestId);
   }
-  const html = getInvitationPage(config, guest);
+  const html = getInvitationPage(config, guest, requestUrl);
   return htmlResponse(html);
+}
+
+/** 返回LOGO图片 — 供微信分享 og:image 使用 */
+async function serveLogo(env) {
+  const config = await getConfig(env);
+  const logo = config.logoImage;
+  if (!logo) {
+    // 默认LOGO：红底金色囍字 300x300 PNG
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300">
+      <rect width="300" height="300" fill="#c41e3a"/>
+      <text x="150" y="210" font-size="180" fill="#d4af37" text-anchor="middle" font-family="serif" font-weight="bold">囍</text>
+    </svg>`;
+    return new Response(svg, { headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=3600' } });
+  }
+  // 如果是 base64 data URI
+  if (logo.startsWith('data:')) {
+    const match = logo.match(/^data:(image\/[\w+]+);base64,(.+)$/);
+    if (match) {
+      const binary = atob(match[2]);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return new Response(bytes, { headers: { 'Content-Type': match[1], 'Cache-Control': 'public, max-age=3600' } });
+    }
+  }
+  // 如果是 URL，重定向
+  if (logo.startsWith('http')) {
+    return Response.redirect(logo, 302);
+  }
+  return new Response('Not Found', { status: 404 });
 }
