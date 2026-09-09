@@ -29,11 +29,11 @@ const DEFAULT_CONFIG = {
   weddingDate: '2026-09-29',   // 【可配置】婚礼日期 YYYY-MM-DD
   weddingTime: '12:00',        // 【可配置】婚礼时间 HH:MM
   lunarDate: '',               // 【可配置】农历日期（留空则自动从公历计算）
-  venue: '鑫禧堂礼宴中心',       // 【可配置】婚礼地点/酒店名称
+  venue: '忻州--鑫禧堂礼宴中心',       // 【可配置】婚礼地点/酒店名称
   venueHall: '水晶主题厅',      // 【可配置】宴会厅名称
   address: '忻府区开发区梨花街以南、同德路以西综合楼',  // 【可配置】详细地址
-  venueDesc: '',               // 【可配置】场地描述
-  navKeyword: '鑫禧堂礼宴中心',  // 【可配置】地图导航搜索关键词
+  venueDesc: '水晶主题',               // 【可配置】场地描述
+  navKeyword: '鑫禧堂礼宴中心，忻州',  // 【可配置】地图导航搜索关键词
   navUrl: 'https://surl.amap.com/fOExV1w103jX',  // 【可配置】导航短链接（高德短链接，后台可修改）
 
   // --- CF文件库资源 ---
