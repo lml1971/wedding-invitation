@@ -28,10 +28,12 @@ const DEFAULT_CONFIG = {
   motherName: '',              // 【可配置】新郎母亲姓名
   weddingDate: '2026-10-01',   // 【可配置】婚礼日期 YYYY-MM-DD
   weddingTime: '11:30',        // 【可配置】婚礼时间 HH:MM
-  lunarDate: '',               // 【可配置】农历日期（如：农历丙午年八月十九）
-  venue: 'XX大酒店',           // 【可配置】婚礼地点
-  address: 'XX市XX区XX路XX号',  // 【可配置】详细地址
+  lunarDate: '',               // 【可配置】农历日期（留空则自动从公历计算）
+  venue: '忻州市忻府区鑫禧堂礼宴中心',  // 【可配置】婚礼地点/酒店名称
+  venueHall: '水晶主题厅',      // 【可配置】宴会厅名称
+  address: '忻州市忻府区',       // 【可配置】详细地址
   venueDesc: '',               // 【可配置】场地描述
+  navKeyword: '鑫禧堂礼宴中心 忻州',  // 【可配置】地图导航搜索关键词
 
   // --- CF文件库资源 ---
   // 【可配置】背景图URL（从CF文件库调用，留空则使用默认渐变背景）
@@ -83,6 +85,163 @@ const DEFAULT_CONFIG = {
     { title: '喜宴', time: '12:00', desc: '宴席开始，恭候入席' },
   ],
 };
+
+// ================== 农历转换算法（内置，不依赖外部API） ==================
+
+// 农历数据表：1900-2100年，每年用十六进制编码
+// 每位含义：1-4位=闰月月份(0=无闰月)，5-16位=每月大小月(1=30天,0=29天)，17位=闰月大小(1=30天,0=29天)
+const LUNAR_INFO = [
+  0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x0a930,0x05592, // 1900-1909
+  0x09630,0x0a9b0,0x0ab50,0x04b60,0x0aa50,0x0a500,0x0a520,0x0a050,0x062a0,0x068d0, // 1910-1919
+  0x072d0,0x08650,0x08670,0x0c550,0x09650,0x055a0,0x092d0,0x0a930,0x0c570,0x0a950, // 1920-1929
+  0x0b5a0,0x0a6d0,0x0a570,0x096d0,0x0aa50,0x0b5a0,0x04650,0x0a550,0x1d2a0,0x1b550, // 1930-1939
+  0x0a6a0,0x0a5d0,0x0a5b0,0x0a6a0,0x0a9b0,0x0aa50,0x0b2a0,0x1d5b0,0x1b2b0,0x0a930, // 1940-1949
+  0x0b550,0x0a570,0x0a4a0,0x0aa50,0x1b255,0x06d30,0x0ada0,0x14b63,0x09370,0x049f8, // 1950-1959
+  0x04970,0x064b0,0x16a50,0x0ed25,0x083b0,0x04970,0x05650,0x16570,0x0d4a0,0x0ea50, // 1960-1969
+  0x06e35,0x0aa55,0x0a630,0x046d0,0x0a8d0,0x0ab50,0x04b50,0x0a950,0x04b50,0x1b275, // 1970-1979
+  0x06a30,0x06d30,0x0af40,0x0ab50,0x04630,0x07a30,0x0aa50,0x0b550,0x19250,0x0b550, // 1980-1989
+  0x0a930,0x06a30,0x0ab50,0x04bb0,0x0a870,0x0a930,0x0a4d0,0x0a970,0x0a450,0x0b270, // 1990-1999
+  0x06d30,0x0af50,0x0ab60,0x09370,0x04af0,0x0a6b0,0x0a570,0x05370,0x0a9b0,0x04970, // 2000-2009
+  0x064b0,0x0a570,0x16550,0x05270,0x0a930,0x0a4a0,0x0aa50,0x1b275,0x06d30,0x0ada0, // 2010-2019
+  0x14b63,0x09370,0x049f8,0x04970,0x064b0,0x16a50,0x0ed25,0x083b0,0x04970,0x05650, // 2020-2029
+  0x16570,0x0d4a0,0x0ea50,0x16a90,0x0aad5,0x052a0,0x0a6d0,0x0ab50,0x04b60,0x0a550, // 2030-2039
+  0x0a540,0x0a6d0,0x0a930,0x0aa50,0x1b2b0,0x068d0,0x0a950,0x04b50,0x0a520,0x0a5d0, // 2040-2049
+  0x0b5a0,0x0a6d0,0x0a570,0x056d0,0x0aa50,0x0b5a0,0x04650,0x0a550,0x1d2a0,0x1b550, // 2050-2059
+  0x0a6a0,0x0a5d0,0x0a5b0,0x0a6a0,0x0a9b0,0x0aa50,0x0b2a0,0x1d5b0,0x1b2b0,0x0a930, // 2060-2069
+  0x0b550,0x0a570,0x0a4a0,0x0aa50,0x1b255,0x06d30,0x0ada0,0x14b63,0x09370,0x049f8, // 2070-2079
+  0x04970,0x064b0,0x16a50,0x0ed25,0x083b0,0x04970,0x05650,0x16570,0x0d4a0,0x0ea50, // 2080-2089
+  0x06e35,0x0aa55,0x0a630,0x046d0,0x0a8d0,0x0ab50,0x04b50,0x0a950,0x04b50,0x1b275, // 2090-2099
+  0x06a30,0x06d30,0x0af40,0x0ab50,0x04630,0x07a30,0x0aa50,0x0b550,0x19250,0x0b550, // 2100-2109
+];
+
+// 天干地支
+const TIAN_GAN = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+const DI_ZHI = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+const SHENG_XIAO = ['鼠','牛','虎','兔','龙','蛇','马','羊','猴','鸡','狗','猪'];
+
+// 农历月名（正月至腊月）
+const LUNAR_MONTHS = ['正','二','三','四','五','六','七','八','九','十','冬','腊'];
+const LUNAR_DAYS = ['初一','初二','初三','初四','初五','初六','初七','初八','初九','初十',
+  '十一','十二','十三','十四','十五','十六','十七','十八','十九','二十',
+  '廿一','廿二','廿三','廿四','廿五','廿六','廿七','廿八','廿九','三十'];
+
+/** 获取农历某年的总天数 */
+function lunarYearDays(year) {
+  let sum = 348;
+  for (let i = 0x8000; i > 0x8; i >>= 1) {
+    sum += (LUNAR_INFO[year - 1900] & i) ? 1 : 0;
+  }
+  return sum + leapDays(year);
+}
+
+/** 闰月天数 */
+function leapDays(year) {
+  if (leapMonth(year)) {
+    return (LUNAR_INFO[year - 1900] & 0x10000) ? 30 : 29;
+  }
+  return 0;
+}
+
+/** 闰月月份（0=无闰月） */
+function leapMonth(year) {
+  return LUNAR_INFO[year - 1900] & 0xf;
+}
+
+/** 某月天数（非闰月） */
+function monthDays(year, month) {
+  return (LUNAR_INFO[year - 1900] & (0x10000 >> month)) ? 30 : 29;
+}
+
+/**
+ * 公历转农历
+ * @param {number} year - 公历年
+ * @param {number} month - 公历月 1-12
+ * @param {number} day - 公历日
+ * @returns {{lunarYear, lunarMonth, lunarDay, isLeap, yearGanZhi, monthName, dayName, animal}}
+ */
+function solar2lunar(year, month, day) {
+  // 基准日期：1900-01-31 = 农历1900年正月初一
+  let offset = Math.floor((Date.UTC(year, month - 1, day) - Date.UTC(1900, 0, 31)) / 86400000);
+  let lunarYear = 1900;
+  let temp = 0;
+
+  // 计算年
+  for (lunarYear = 1900; lunarYear < 2101 && offset > 0; lunarYear++) {
+    temp = lunarYearDays(lunarYear);
+    offset -= temp;
+  }
+  if (offset < 0) {
+    offset += temp;
+    lunarYear--;
+  }
+
+  // 计算月
+  let leap = leapMonth(lunarYear);
+  let isLeap = false;
+  let lunarMonth = 1;
+  let daysInMonth = 0;
+
+  for (lunarMonth = 1; lunarMonth < 13 && offset >= 0; lunarMonth++) {
+    if (leap > 0 && lunarMonth === leap + 1 && !isLeap) {
+      lunarMonth--;
+      isLeap = true;
+      daysInMonth = leapDays(lunarYear);
+    } else {
+      daysInMonth = monthDays(lunarYear, lunarMonth - 1);
+    }
+    offset -= daysInMonth;
+    if (isLeap && lunarMonth === leap + 1) isLeap = false;
+  }
+
+  if (offset < 0) {
+    offset += daysInMonth;
+    lunarMonth--;
+  }
+
+  let lunarDay = offset + 1;
+
+  // 天干地支年
+  let ganZhiYear = TIAN_GAN[(lunarYear - 4) % 10] + DI_ZHI[(lunarYear - 4) % 12];
+  let animal = SHENG_XIAO[(lunarYear - 4) % 12];
+
+  // 月名
+  let monthName = (isLeap ? '闰' : '') + LUNAR_MONTHS[lunarMonth - 1] + '月';
+  // 日名
+  let dayName = LUNAR_DAYS[lunarDay - 1];
+
+  return {
+    lunarYear: lunarYear,
+    lunarMonth: lunarMonth,
+    lunarDay: lunarDay,
+    isLeap: isLeap,
+    yearGanZhi: ganZhiYear,
+    animal: animal,
+    monthName: monthName,
+    dayName: dayName,
+  };
+}
+
+/**
+ * 公历日期字符串转农历显示文本
+ * @param {string} dateStr - YYYY-MM-DD
+ * @returns {string} 如 "农历丙午年八月十六" 或 "" 如果无效
+ */
+function solar2lunarStr(dateStr) {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return '';
+  const y = parseInt(parts[0]);
+  const m = parseInt(parts[1]);
+  const d = parseInt(parts[2]);
+  if (!y || !m || !d) return '';
+  if (y < 1901 || y > 2100) return '';
+  try {
+    const lunar = solar2lunar(y, m, d);
+    return `农历${lunar.yearGanZhi}年${lunar.monthName}${lunar.dayName}`;
+  } catch (e) {
+    return '';
+  }
+}
 
 // ================== 工具函数 ==================
 
@@ -164,6 +323,9 @@ function getInvitationPage(config, guest) {
     ? `${dateParts[0]}年${parseInt(dateParts[1])}月${parseInt(dateParts[2])}日`
     : config.weddingDate;
 
+  // 农历日期：如果 lunarDate 为空则自动从公历计算
+  const lunarStr = config.lunarDate || solar2lunarStr(config.weddingDate);
+
   // 星期计算
   const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
   let weekDay = '';
@@ -172,9 +334,10 @@ function getInvitationPage(config, guest) {
     weekDay = weekDays[d.getDay()] || '';
   } catch(e) {}
 
-  // 宾客问候
+  // 宾客问候（含称谓）
+  const guestTitle = guest ? (guest.title || '') : '';
   const greeting = guestName
-    ? `<div class="guest-greeting">致 <strong>${guestName}</strong></div>`
+    ? `<div class="guest-greeting">尊敬的 <strong>${guestName}</strong>${guestTitle ? ' ' + guestTitle : ''}</div>`
     : `<div class="guest-greeting">致 尊敬的宾客</div>`;
 
   // 音乐按钮
@@ -252,7 +415,7 @@ function getInvitationPage(config, guest) {
     </section>` : '';
 
   // 邀请信
-  const invitationText = config.text.invitationText || `吾儿 ${config.groomName} 与 ${config.brideName} 女士，喜结良缘，定于公历${formattedDate}（${config.lunarDate || ''}${weekDay ? ' · ' + weekDay : ''}），在${config.venue}举行结婚典礼。届时恭请您携家人光临，同贺新婚之喜。`;
+  const invitationText = config.text.invitationText || `吾儿 ${config.groomName} 与 ${config.brideName} 女士，喜结良缘，定于公历${formattedDate}（${lunarStr}${weekDay ? ' · ' + weekDay : ''}），在${config.venue}${config.venueHall ? config.venueHall : ''}举行结婚典礼。届时恭请您携家人光临，同贺新婚之喜。`;
 
   // RSVP表单
   const rsvpSection = features.rsvp ? `
@@ -494,9 +657,16 @@ body {
   border: 1px solid rgba(212,175,55,0.3); border-radius: 12px;
   padding: 1.5rem; max-width: 380px; margin: 0 auto;
 }
-.venue-card .venue-name { font-size: 1.3rem; color: var(--c-gold); margin-bottom: 0.5rem; }
+.venue-card .venue-name { font-size: 1.3rem; color: var(--c-gold); margin-bottom: 0.3rem; }
+.venue-card .venue-hall { font-size: 1rem; color: var(--c-gold); opacity: 0.85; margin-bottom: 0.3rem; }
 .venue-card .venue-addr { font-size: 0.9rem; opacity: 0.7; }
 .venue-card .venue-desc-text { font-size: 0.85rem; opacity: 0.6; margin-top: 0.5rem; }
+.venue-nav-btn {
+  margin-top: 1rem; padding: 0.6rem 1.5rem; border: 1.5px solid var(--c-gold);
+  border-radius: 25px; background: rgba(212,175,55,0.15); color: var(--c-gold);
+  font-size: 0.95rem; cursor: pointer; font-family: inherit; transition: all 0.2s;
+}
+.venue-nav-btn:hover { background: rgba(212,175,55,0.3); transform: scale(1.03); }
 /* RSVP */
 .rsvp-hint { font-size: 0.85rem; opacity: 0.7; margin-bottom: 1rem; }
 .rsvp-form { max-width: 380px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.8rem; }
@@ -560,7 +730,7 @@ ${lanterns}
     <div class="date-block">
       <div class="date-main">${formattedDate}</div>
       ${weekDay ? `<div class="date-sub">${weekDay}</div>` : ''}
-      ${config.lunarDate ? `<div class="date-sub">${config.lunarDate}</div>` : ''}
+      ${lunarStr ? `<div class="date-sub">${lunarStr}</div>` : ''}
       <div class="date-time">${config.weddingTime}</div>
     </div>
     ${features.countdown ? `
@@ -604,8 +774,10 @@ ${lanterns}
     </div>
     <div class="venue-card">
       <div class="venue-name">${config.venue}</div>
+      ${config.venueHall ? `<div class="venue-hall">${config.venueHall}</div>` : ''}
       <div class="venue-addr">${config.address}</div>
       ${config.venueDesc ? `<div class="venue-desc-text">${config.venueDesc}</div>` : ''}
+      <button class="venue-nav-btn" onclick="openMapNav()">📍 点击导航</button>
     </div>
   </section>
 
@@ -727,6 +899,25 @@ function fadeAudio(audio, fadeIn, cb) {
 
 // ================== RSVP ==================
 const GUEST_ID = '${guestId}';
+const NAV_KEYWORD = '${(config.navKeyword || config.venue || '').replace(/'/g, "\\'")}';
+function openMapNav() {
+  var kw = encodeURIComponent(NAV_KEYWORD);
+  var ua = navigator.userAgent.toLowerCase();
+  if (ua.indexOf('micromessenger') > -1) {
+    // 微信内置浏览器 — 使用腾讯地图
+    window.location.href = 'https://apis.map.qq.com/uri/v1/search?keyword=' + kw + '&referer=1';
+  } else if (ua.indexOf('android') > -1) {
+    // 安卓 — 优先高德，回退百度
+    window.location.href = 'androidamap://search?keyword=' + kw;
+    setTimeout(function() { window.location.href = 'https://uri.amap.com/search?keyword=' + kw; }, 300);
+  } else if (ua.indexOf('iphone') > -1 || ua.indexOf('ipad') > -1) {
+    // iOS — 高德地图
+    window.location.href = 'https://uri.amap.com/search?keyword=' + kw;
+  } else {
+    // 桌面 — 百度地图
+    window.open('https://map.baidu.com/?wd=' + kw, '_blank');
+  }
+}
 function submitRSVP() {
   const status = document.getElementById('rsvpStatus').value;
   const count = document.getElementById('rsvpCount').value;
@@ -850,10 +1041,12 @@ th { color: #e94560; }
     <div class="form-group"><label>新郎母亲姓名</label><input id="cfg-mother" type="text" placeholder="留空则不显示"></div>
     <div class="form-group"><label>婚礼日期</label><input id="cfg-date" type="date"></div>
     <div class="form-group"><label>婚礼时间</label><input id="cfg-time" type="time"></div>
-    <div class="form-group"><label>农历日期</label><input id="cfg-lunar" type="text" placeholder="如：农历丙午年八月十九"></div>
-    <div class="form-group"><label>婚礼地点</label><input id="cfg-venue" type="text"></div>
+    <div class="form-group"><label>农历日期</label><input id="cfg-lunar" type="text" placeholder="留空则自动从公历日期计算"></div>
+    <div class="form-group"><label>婚礼地点/酒店名称</label><input id="cfg-venue" type="text"></div>
+    <div class="form-group"><label>宴会厅名称</label><input id="cfg-venueHall" type="text" placeholder="如：水晶主题厅"></div>
     <div class="form-group"><label>详细地址</label><input id="cfg-address" type="text"></div>
-    <div class="form-group"><label>场地描述</label><input id="cfg-venueDesc" type="text" placeholder="如：豪华水晶主题宴会厅"></div>
+    <div class="form-group"><label>场地描述</label><input id="cfg-venueDesc" type="text" placeholder="选填"></div>
+    <div class="form-group"><label>地图导航关键词</label><input id="cfg-navKeyword" type="text" placeholder="如：鑫禧堂礼宴中心 忻州"><div class="hint">用于导航按钮搜索酒店位置，建议填写酒店名称+城市</div></div>
     <div class="form-group"><label>请帖模板</label><select id="cfg-template"><option value="classic">经典红金</option><option value="elegant">优雅暗金</option><option value="modern">现代粉青</option></select></div>
     <button class="btn btn-primary" onclick="saveConfig()">保存配置</button>
   </div>
@@ -920,19 +1113,30 @@ th { color: #e94560; }
 
   <div class="panel" id="panel-guests">
     <h2>宾客管理</h2>
-    <div class="add-guest-row">
-      <input id="singleGuestName" type="text" placeholder="输入单个宾客姓名">
+    <div class="add-guest-row" style="flex-wrap:wrap;">
+      <input id="singleGuestName" type="text" placeholder="宾客姓名" style="flex:1;min-width:100px;">
+      <select id="singleGuestTitle" style="width:90px;padding:0.6rem;border:1px solid #333;border-radius:6px;background:#0f3460;color:#fff;font-size:0.85rem;">
+        <option value="">称谓</option>
+        <option value="先生">先生</option>
+        <option value="女士">女士</option>
+        <option value="全家">全家</option>
+        <option value="老师">老师</option>
+        <option value="教授">教授</option>
+        <option value="博士">博士</option>
+        <option value="经理">经理</option>
+      </select>
+      <input id="singleGuestPhone" type="text" placeholder="电话（选填）" style="width:120px;padding:0.6rem;border:1px solid #333;border-radius:6px;background:#0f3460;color:#fff;font-size:0.85rem;">
       <button class="btn btn-gold" onclick="addSingleGuest()">添加</button>
     </div>
     <div class="form-group">
-      <label>批量导入宾客名单（每行一个姓名，或 姓名,电话）</label>
-      <textarea class="import-area" id="guestImport" placeholder="张三\n李四,13800138000\n王五"></textarea>
+      <label>批量导入宾客名单（每行格式：姓名,称谓,电话 — 称谓和电话可选）</label>
+      <textarea class="import-area" id="guestImport" placeholder="张三,先生,13800138000&#10;李四,女士&#10;王五,全家&#10;赵六"></textarea>
       <div class="hint">支持从统计表格复制粘贴，每行一位宾客</div>
     </div>
     <button class="btn btn-success" onclick="importGuests()">批量导入</button>
     <button class="btn btn-primary" onclick="loadGuests()" style="margin-left:0.5rem;">刷新列表</button>
     <table id="guestTable">
-      <thead><tr><th>姓名</th><th>电话</th><th>回执状态</th><th>专属链接</th><th>操作</th></tr></thead>
+      <thead><tr><th>姓名</th><th>称谓</th><th>电话</th><th>回执状态</th><th>专属链接</th><th>操作</th></tr></thead>
       <tbody id="guestList"></tbody>
     </table>
   </div>
@@ -1019,6 +1223,48 @@ function showPanel(name) {
   if (name === 'stats') loadStats();
 }
 
+// ================== 农历转换（后台管理用） ==================
+const LUNAR_INFO_A = [0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x0a930,0x05592,0x09630,0x0a9b0,0x0ab50,0x04b60,0x0aa50,0x0a500,0x0a520,0x0a050,0x062a0,0x068d0,0x072d0,0x08650,0x08670,0x0c550,0x09650,0x055a0,0x092d0,0x0a930,0x0c570,0x0a950,0x0b5a0,0x0a6d0,0x0a570,0x096d0,0x0aa50,0x0b5a0,0x04650,0x0a550,0x1d2a0,0x1b550,0x0a6a0,0x0a5d0,0x0a5b0,0x0a6a0,0x0a9b0,0x0aa50,0x0b2a0,0x1d5b0,0x1b2b0,0x0a930,0x0b550,0x0a570,0x0a4a0,0x0aa50,0x1b255,0x06d30,0x0ada0,0x14b63,0x09370,0x049f8,0x04970,0x064b0,0x16a50,0x0ed25,0x083b0,0x04970,0x05650,0x16570,0x0d4a0,0x0ea50,0x06e35,0x0aa55,0x0a630,0x046d0,0x0a8d0,0x0ab50,0x04b50,0x0a950,0x04b50,0x1b275,0x06a30,0x06d30,0x0af40,0x0ab50,0x04630,0x07a30,0x0aa50,0x0b550,0x19250,0x0b550,0x0a930,0x06a30,0x0ab50,0x04bb0,0x0a870,0x0a930,0x0a4d0,0x0a970,0x0a450,0x0b270,0x06d30,0x0af50,0x0ab60,0x09370,0x04af0,0x0a6b0,0x0a570,0x05370,0x0a9b0,0x04970,0x064b0,0x0a570,0x16550,0x05270,0x0a930,0x0a4a0,0x0aa50,0x1b275,0x06d30,0x0ada0,0x14b63,0x09370,0x049f8,0x04970,0x064b0,0x16a50,0x0ed25,0x083b0,0x04970,0x05650,0x16570,0x0d4a0,0x0ea50,0x16a90,0x0aad5,0x052a0,0x0a6d0,0x0ab50,0x04b60,0x0a550,0x0a540,0x0a6d0,0x0a930,0x0aa50,0x1b2b0,0x068d0,0x0a950,0x04b50,0x0a520,0x0a5d0,0x0b5a0,0x0a6d0,0x0a570,0x056d0,0x0aa50,0x0b5a0,0x04650,0x0a550,0x1d2a0,0x1b550,0x0a6a0,0x0a5d0,0x0a5b0,0x0a6a0,0x0a9b0,0x0aa50,0x0b2a0,0x1d5b0,0x1b2b0,0x0a930,0x0b550,0x0a570,0x0a4a0,0x0aa50,0x1b255,0x06d30,0x0ada0,0x14b63,0x09370,0x049f8,0x04970,0x064b0,0x16a50,0x0ed25,0x083b0,0x04970,0x05650,0x16570,0x0d4a0,0x0ea50,0x06e35,0x0aa55,0x0a630,0x046d0,0x0a8d0,0x0ab50,0x04b50,0x0a950,0x04b50,0x1b275,0x06a30,0x06d30,0x0af40,0x0ab50,0x04630,0x07a30,0x0aa50,0x0b550,0x19250,0x0b550];
+const TG = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+const DZ = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+const LMS = ['正','二','三','四','五','六','七','八','九','十','冬','腊'];
+const LDS = ['初一','初二','初三','初四','初五','初六','初七','初八','初九','初十','十一','十二','十三','十四','十五','十六','十七','十八','十九','二十','廿一','廿二','廿三','廿四','廿五','廿六','廿七','廿八','廿九','三十'];
+function lYearDays(y) { var s=348; for(var i=0x8000;i>0x8;i>>=1) s+=(LUNAR_INFO_A[y-1900]&i)?1:0; return s+((LUNAR_INFO_A[y-1900]&0xf)?((LUNAR_INFO_A[y-1900]&0x10000)?30:29):0); }
+function lMonthDays(y,m) { return (LUNAR_INFO_A[y-1900]&(0x10000>>m))?30:29; }
+function lLeap(y) { return LUNAR_INFO_A[y-1900]&0xf; }
+function lLeapDays(y) { return lLeap(y)?((LUNAR_INFO_A[y-1900]&0x10000)?30:29):0; }
+function solar2lunarStr(dateStr) {
+  if(!dateStr) return '';
+  var p=dateStr.split('-'); if(p.length!==3) return '';
+  var y=parseInt(p[0]),m=parseInt(p[1]),d=parseInt(p[2]); if(!y||!m||!d) return '';
+  if(y<1901||y>2100) return '';
+  try {
+    var off=Math.floor((Date.UTC(y,m-1,d)-Date.UTC(1900,0,31))/86400000);
+    var ly=1900,t=0;
+    for(ly=1900;ly<2101&&off>0;ly++){t=lYearDays(ly);off-=t;}
+    if(off<0){off+=t;ly--;}
+    var leap=lLeap(ly),isLeap=false,lm=1,dim=0;
+    for(lm=1;lm<13&&off>=0;lm++){
+      if(leap>0&&lm===leap+1&&!isLeap){lm--;isLeap=true;dim=lLeapDays(ly);}
+      else{dim=lMonthDays(ly,lm-1);}
+      off-=dim; if(isLeap&&lm===leap+1)isLeap=false;
+    }
+    if(off<0){off+=dim;lm--;}
+    var ld=off+1;
+    var gz=TG[(ly-4)%10]+DZ[(ly-4)%12];
+    var mn=(isLeap?'闰':'')+LMS[lm-1]+'月';
+    var dn=LDS[ld-1];
+    return '农历'+gz+'年'+mn+dn;
+  } catch(e){ return ''; }
+}
+function autoFillLunar() {
+  var dateVal = document.getElementById('cfg-date').value;
+  var lunarField = document.getElementById('cfg-lunar');
+  if (!dateVal) return;
+  var auto = solar2lunarStr(dateVal);
+  if (auto) { lunarField.value = auto; showToast('农历已自动填入：' + auto, 'success'); }
+}
+
 // ================== 配置管理 ==================
 function loadConfig() {
   fetch('/api/config').then(r => r.json()).then(data => {
@@ -1028,11 +1274,14 @@ function loadConfig() {
     document.getElementById('cfg-father').value = data.fatherName || '';
     document.getElementById('cfg-mother').value = data.motherName || '';
     document.getElementById('cfg-date').value = data.weddingDate || '';
+    document.getElementById('cfg-date').onchange = autoFillLunar;
     document.getElementById('cfg-time').value = data.weddingTime || '';
     document.getElementById('cfg-lunar').value = data.lunarDate || '';
     document.getElementById('cfg-venue').value = data.venue || '';
+    document.getElementById('cfg-venueHall').value = data.venueHall || '';
     document.getElementById('cfg-address').value = data.address || '';
     document.getElementById('cfg-venueDesc').value = data.venueDesc || '';
+    document.getElementById('cfg-navKeyword').value = data.navKeyword || '';
     document.getElementById('cfg-template').value = data.template || 'classic';
     document.getElementById('cfg-bgImage').value = data.bgImage || '';
     document.getElementById('cfg-bgMusic').value = data.bgMusic || '';
@@ -1072,8 +1321,10 @@ function saveConfig() {
     weddingTime: document.getElementById('cfg-time').value,
     lunarDate: document.getElementById('cfg-lunar').value,
     venue: document.getElementById('cfg-venue').value,
+    venueHall: document.getElementById('cfg-venueHall').value,
     address: document.getElementById('cfg-address').value,
     venueDesc: document.getElementById('cfg-venueDesc').value,
+    navKeyword: document.getElementById('cfg-navKeyword').value,
     template: document.getElementById('cfg-template').value,
     bgImage: document.getElementById('cfg-bgImage').value,
     bgMusic: document.getElementById('cfg-bgMusic').value,
@@ -1217,17 +1468,21 @@ function collectStory() {
 // ================== 宾客管理 ==================
 // 添加单个宾客
 function addSingleGuest() {
-  const input = document.getElementById('singleGuestName');
-  const name = input.value.trim();
+  const nameEl = document.getElementById('singleGuestName');
+  const titleEl = document.getElementById('singleGuestTitle');
+  const phoneEl = document.getElementById('singleGuestPhone');
+  const name = nameEl.value.trim();
   if (!name) { showToast('请输入宾客姓名', 'error'); return; }
+  const title = titleEl.value;
+  const phone = phoneEl.value.trim();
   fetch('/api/guests', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Auth-Token': AUTH_TOKEN },
-    body: JSON.stringify({ guests: [{ name: name, phone: '' }] })
+    body: JSON.stringify({ guests: [{ name: name, title: title, phone: phone }] })
   }).then(r => r.json()).then(data => {
     if (data.success) {
-      showToast('已添加宾客：' + name + '，链接：' + location.origin + '/i/' + data.guestIds[0], 'success');
-      input.value = '';
+      showToast('已添加：' + name + (title ? ' ' + title : '') + '，链接：' + location.origin + '/i/' + data.guestIds[0], 'success');
+      nameEl.value = ''; titleEl.value = ''; phoneEl.value = '';
       loadGuests();
     } else {
       showToast('添加失败', 'error');
@@ -1242,7 +1497,15 @@ function importGuests() {
   const lines = text.split('\\n').map(l => l.trim()).filter(l => l);
   const guests = lines.map(l => {
     const parts = l.split(',');
-    return { name: parts[0].trim(), phone: (parts[1] || '').trim() };
+    const name = parts[0] ? parts[0].trim() : '';
+    // 第二列可能是称谓也可能是电话，判断逻辑：长度<=4且中文则为称谓
+    let title = '', phone = '';
+    if (parts[1]) {
+      const v = parts[1].trim();
+      if (/^[\u4e00-\u9fa5]{1,4}$/.test(v)) { title = v; phone = (parts[2]||'').trim(); }
+      else { phone = v; }
+    }
+    return { name: name, title: title, phone: phone };
   });
   fetch('/api/guests', {
     method: 'POST',
@@ -1264,7 +1527,7 @@ function loadGuests() {
       list.innerHTML = guestsData.map(function(g) {
         const rsvpText = g.rsvp ? ({attending:'到场', maybe:'待定', declined:'不出席'}[g.rsvp] || '-') : '未回复';
         const url = base + g.id;
-        return '<tr><td>' + g.name + '</td><td>' + (g.phone || '-') + '</td><td>' + rsvpText + '</td>'
+        return '<tr><td>' + g.name + '</td><td>' + (g.title || '-') + '</td><td>' + (g.phone || '-') + '</td><td>' + rsvpText + '</td>'
           + '<td><a class="guest-link" href="' + url + '" target="_blank">查看请帖</a></td>'
           + '<td><button class="btn btn-danger" onclick="deleteGuest(\\'' + g.id + '\\')">删除</button></td></tr>';
       }).join('');
@@ -1297,8 +1560,8 @@ function refreshLinks() {
 function exportLinks() {
   const base = location.origin + '/i/';
   if (guestsData.length === 0) { showToast('请先导入宾客', 'error'); return; }
-  var lines = guestsData.map(function(g) { return g.name + '\\t' + base + g.id; });
-  var content = '姓名\\t专属链接\\n' + lines.join('\\n');
+  var lines = guestsData.map(function(g) { return g.name + (g.title ? '\\t' + g.title : '') + '\\t' + base + g.id; });
+  var content = '姓名\\t称谓\\t专属链接\\n' + lines.join('\\n');
   var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1412,7 +1675,7 @@ export default {
       for (const g of (body.guests || [])) {
         if (!g.name) continue; // 跳过无名字的行
         const id = genId();
-        guests.push({ id, name: g.name, phone: g.phone || '' });
+        guests.push({ id, name: g.name, title: g.title || '', phone: g.phone || '' });
         guestIds.push(id);
         added++;
       }
