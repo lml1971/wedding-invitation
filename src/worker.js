@@ -928,19 +928,33 @@ const NAV_KEYWORD = '${(config.navKeyword || config.venue || '').replace(/'/g, "
 function openMapNav() {
   var kw = encodeURIComponent(NAV_KEYWORD);
   var ua = navigator.userAgent.toLowerCase();
+  var amapWeb = 'https://uri.amap.com/search?keyword=' + kw;
+  var baiduWeb = 'https://map.baidu.com/?query=' + kw + '&from=webmap';
   if (ua.indexOf('micromessenger') > -1) {
-    // 微信内置浏览器 — 使用腾讯地图
-    window.location.href = 'https://apis.map.qq.com/uri/v1/search?keyword=' + kw + '&referer=1';
+    // 微信内置浏览器 — 高德网页版（无需API Key，微信内可正常打开）
+    window.location.href = amapWeb;
   } else if (ua.indexOf('android') > -1) {
-    // 安卓 — 优先高德，回退百度
+    // 安卓 — 尝试唤起高德APP，1.5秒后未跳转则fallback到网页版
+    var loaded = false;
+    var start = Date.now();
     window.location.href = 'androidamap://search?keyword=' + kw;
-    setTimeout(function() { window.location.href = 'https://uri.amap.com/search?keyword=' + kw; }, 300);
+    setTimeout(function() {
+      // 如果页面还可见说明APP没唤起，跳网页版
+      if (!loaded && Date.now() - start < 3000) window.location.href = amapWeb;
+    }, 1500);
+    document.addEventListener('visibilitychange', function() { loaded = true; }, { once: true });
   } else if (ua.indexOf('iphone') > -1 || ua.indexOf('ipad') > -1) {
-    // iOS — 高德地图
-    window.location.href = 'https://uri.amap.com/search?keyword=' + kw;
+    // iOS — 尝试唤起高德APP，fallback到网页版
+    var loaded2 = false;
+    var start2 = Date.now();
+    window.location.href = 'iosamap://search?keyword=' + kw;
+    setTimeout(function() {
+      if (!loaded2 && Date.now() - start2 < 3000) window.location.href = amapWeb;
+    }, 1500);
+    document.addEventListener('visibilitychange', function() { loaded2 = true; }, { once: true });
   } else {
-    // 桌面 — 百度地图
-    window.open('https://map.baidu.com/?wd=' + kw, '_blank');
+    // 桌面 — 百度地图网页版
+    window.open(baiduWeb, '_blank');
   }
 }
 function submitRSVP() {
