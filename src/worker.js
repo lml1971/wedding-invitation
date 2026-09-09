@@ -467,16 +467,16 @@ function getInvitationPage(config, guest, requestUrl) {
         <div class="rsvp-row">
           <label class="rsvp-label">祝福语（选填，可点选下方祝福）</label>
           <div class="blessing-chips">
-            <span class="blessing-chip" onclick="setBlessing('百年好合')">百年好合</span>
-            <span class="blessing-chip" onclick="setBlessing('早生贵子')">早生贵子</span>
-            <span class="blessing-chip" onclick="setBlessing('永结同心')">永结同心</span>
-            <span class="blessing-chip" onclick="setBlessing('白头偕老')">白头偕老</span>
-            <span class="blessing-chip" onclick="setBlessing('幸福美满')">幸福美满</span>
-            <span class="blessing-chip" onclick="setBlessing('佳偶天成')">佳偶天成</span>
-            <span class="blessing-chip" onclick="setBlessing('琴瑟和鸣')">琴瑟和鸣</span>
-            <span class="blessing-chip" onclick="setBlessing('花开并蒂')">花开并蒂</span>
+            <span class="blessing-chip" onclick="toggleBlessing(this, '百年好合')">百年好合</span>
+            <span class="blessing-chip" onclick="toggleBlessing(this, '早生贵子')">早生贵子</span>
+            <span class="blessing-chip" onclick="toggleBlessing(this, '永结同心')">永结同心</span>
+            <span class="blessing-chip" onclick="toggleBlessing(this, '白头偕老')">白头偕老</span>
+            <span class="blessing-chip" onclick="toggleBlessing(this, '幸福美满')">幸福美满</span>
+            <span class="blessing-chip" onclick="toggleBlessing(this, '佳偶天成')">佳偶天成</span>
+            <span class="blessing-chip" onclick="toggleBlessing(this, '琴瑟和鸣')">琴瑟和鸣</span>
+            <span class="blessing-chip" onclick="toggleBlessing(this, '花开并蒂')">花开并蒂</span>
           </div>
-          <textarea id="rsvpMessage" class="rsvp-textarea" placeholder="写下您的祝福（选填）或点击上方祝福词" rows="3"></textarea>
+          <textarea id="rsvpMessage" class="rsvp-textarea" placeholder="写下您的祝福（选填）或点击上方祝福词多选" rows="3"></textarea>
         </div>
       </div>
       <div id="rsvpResult" class="rsvp-result"></div>
@@ -651,12 +651,23 @@ body {
 .date-block .date-main { font-size: 1.5rem; color: var(--c-light); }
 .date-block .date-sub { font-size: 1.05rem; opacity: 0.7; margin-top: 0.3rem; }
 .date-block .date-time { font-size: 1.25rem; color: var(--c-gold); margin-top: 0.5rem; }
+/* 英雄区小标题 */
+.block-title {
+  font-size: 1rem; color: var(--c-gold); opacity: 0.6; letter-spacing: 2px;
+  margin-bottom: 0.4rem; position: relative; display: inline-block;
+}
+.block-title::before, .block-title::after {
+  content: ''; display: inline-block; width: 20px; height: 1px;
+  background: var(--c-gold); opacity: 0.5; vertical-align: middle;
+  margin: 0 0.5rem;
+}
 /* 英雄区场地信息 */
 .hero-venue {
   margin: 0.8rem 0 0.3rem; animation: fadeInUp 1.9s ease;
   display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
 }
-.hero-venue .hv-name { font-size: 1.15rem; color: var(--c-gold); font-weight: bold; }
+.hero-venue .hv-name { font-size: 1.6rem; color: var(--c-gold); font-weight: bold; text-shadow: 0 1px 8px rgba(212,175,55,0.4); letter-spacing: 1px; }
+.hero-venue .hv-hall { font-size: 1.1rem; color: var(--c-gold); opacity: 0.85; }
 .hero-venue .hv-addr { font-size: 0.85rem; opacity: 0.65; max-width: 280px; }
 .hero-venue .hv-nav {
   margin-top: 0.4rem; padding: 0.35rem 1.2rem; border: 1px solid var(--c-gold);
@@ -803,13 +814,16 @@ ${lanterns}
     </div>
     <p class="poem">${config.text.poem || '执子之手，与子偕老'}</p>
     <div class="date-block">
+      <div class="block-title">婚礼时间</div>
       <div class="date-main">${formattedDate}</div>
       ${weekDay ? `<div class="date-sub">${weekDay}</div>` : ''}
       ${lunarStr ? `<div class="date-sub">${lunarStr}</div>` : ''}
       <div class="date-time">${config.weddingTime}</div>
     </div>
     <div class="hero-venue">
-      <div class="hv-name">📍 ${config.venue}${config.venueHall ? ' · ' + config.venueHall : ''}</div>
+      <div class="block-title">婚礼地点</div>
+      <div class="hv-name">${config.venue}</div>
+      ${config.venueHall ? `<div class="hv-hall">${config.venueHall}</div>` : ''}
       <div class="hv-addr">${config.address}</div>
       <button class="hv-nav" onclick="openMapNav()">点击导航</button>
     </div>
@@ -967,11 +981,18 @@ const NAV_URL = '${(config.navUrl || 'https://surl.amap.com/fOExV1w103jX').repla
 function openMapNav() {
   window.open(NAV_URL, '_blank');
 }
-function setBlessing(text) {
+function toggleBlessing(el, text) {
   const ta = document.getElementById('rsvpMessage');
-  ta.value = text;
-  document.querySelectorAll('.blessing-chip').forEach(c => c.classList.remove('active'));
-  event.target.classList.add('active');
+  let selected = ta.value.trim() ? ta.value.trim().split(/[，,、\s]+/).filter(Boolean) : [];
+  const idx = selected.indexOf(text);
+  if (idx >= 0) {
+    selected.splice(idx, 1);
+    el.classList.remove('active');
+  } else {
+    selected.push(text);
+    el.classList.add('active');
+  }
+  ta.value = selected.join('，');
 }
 function submitRSVP() {
   const status = document.getElementById('rsvpStatus').value;
