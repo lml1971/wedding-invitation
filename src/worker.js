@@ -22,12 +22,12 @@
 // ================== 默认配置（首次部署写入KV，后续通过后台修改） ==================
 const DEFAULT_CONFIG = {
   // --- 基础信息 ---
-  groomName: '新郎',           // 【可配置】新郎姓名
-  brideName: '新娘',           // 【可配置】新娘姓名
-  fatherName: '',              // 【可配置】新郎父亲姓名
-  motherName: '',              // 【可配置】新郎母亲姓名
-  weddingDate: '2026-10-01',   // 【可配置】婚礼日期 YYYY-MM-DD
-  weddingTime: '11:30',        // 【可配置】婚礼时间 HH:MM
+  groomName: '李瀚伟',           // 【可配置】新郎姓名
+  brideName: '高秋月',           // 【可配置】新娘姓名
+  fatherName: '李茂林',              // 【可配置】新郎父亲姓名
+  motherName: '崔玉平',              // 【可配置】新郎母亲姓名
+  weddingDate: '2026-09-29',   // 【可配置】婚礼日期 YYYY-MM-DD
+  weddingTime: '12:00',        // 【可配置】婚礼时间 HH:MM
   lunarDate: '',               // 【可配置】农历日期（留空则自动从公历计算）
   venue: '鑫禧堂礼宴中心',       // 【可配置】婚礼地点/酒店名称
   venueHall: '水晶主题厅',      // 【可配置】宴会厅名称
@@ -451,13 +451,33 @@ function getInvitationPage(config, guest, requestUrl) {
         </div>
         <div class="rsvp-row">
           <label class="rsvp-label">出席人数</label>
-          <input type="number" id="rsvpCount" class="rsvp-input" placeholder="1" min="1" max="10" value="1">
+          <div class="rsvp-count-row">
+            <input type="number" id="rsvpCount" class="rsvp-input rsvp-count-input" placeholder="请选择或输入人数" min="1" max="6" list="countList" value="">
+            <datalist id="countList">
+              <option value="1">1人</option>
+              <option value="2">2人</option>
+              <option value="3">3人</option>
+              <option value="4">4人</option>
+              <option value="5">5人</option>
+              <option value="6">6人</option>
+            </datalist>
+            <button class="rsvp-submit rsvp-submit-inline" onclick="submitRSVP()">提交回执</button>
+          </div>
         </div>
         <div class="rsvp-row">
-          <label class="rsvp-label">祝福语</label>
-          <textarea id="rsvpMessage" class="rsvp-textarea" placeholder="写下您的祝福（选填）" rows="3"></textarea>
+          <label class="rsvp-label">祝福语（选填，可点选下方祝福）</label>
+          <div class="blessing-chips">
+            <span class="blessing-chip" onclick="setBlessing('百年好合')">百年好合</span>
+            <span class="blessing-chip" onclick="setBlessing('早生贵子')">早生贵子</span>
+            <span class="blessing-chip" onclick="setBlessing('永结同心')">永结同心</span>
+            <span class="blessing-chip" onclick="setBlessing('白头偕老')">白头偕老</span>
+            <span class="blessing-chip" onclick="setBlessing('幸福美满')">幸福美满</span>
+            <span class="blessing-chip" onclick="setBlessing('佳偶天成')">佳偶天成</span>
+            <span class="blessing-chip" onclick="setBlessing('琴瑟和鸣')">琴瑟和鸣</span>
+            <span class="blessing-chip" onclick="setBlessing('花开并蒂')">花开并蒂</span>
+          </div>
+          <textarea id="rsvpMessage" class="rsvp-textarea" placeholder="写下您的祝福（选填）或点击上方祝福词" rows="3"></textarea>
         </div>
-        <button class="rsvp-submit" onclick="submitRSVP()">提交回执</button>
       </div>
       <div id="rsvpResult" class="rsvp-result"></div>
     </section>` : '';
@@ -604,79 +624,92 @@ body {
 /* 英雄区 */
 .hero {
   min-height: 100vh; display: flex; flex-direction: column;
-  justify-content: center; align-items: center; padding: 2rem 1.5rem;
+  justify-content: center; align-items: center; padding: 1.5rem 1.5rem;
   text-align: center;
 }
 .hero .xi-big {
-  font-size: 5rem; color: var(--c-gold); margin-bottom: 1rem;
+  font-size: 5.5rem; color: var(--c-gold); margin-bottom: 0.8rem;
   text-shadow: 0 0 30px rgba(212,175,55,0.5);
   animation: fadeInScale 1.5s ease;
 }
-.hero .subtitle { font-size: 1rem; opacity: 0.8; margin-bottom: 0.5rem; animation: fadeInUp 0.8s ease; }
+.hero .subtitle { font-size: 1.15rem; opacity: 0.8; margin-bottom: 0.5rem; animation: fadeInUp 0.8s ease; }
 .hero h1 {
-  font-size: 2rem; color: var(--c-gold); margin-bottom: 1.5rem;
+  font-size: 2.2rem; color: var(--c-gold); margin-bottom: 1.2rem;
   letter-spacing: 3px; animation: fadeInUp 1s ease;
   text-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 .guest-greeting {
-  font-size: 1.1rem; color: var(--c-gold); margin-bottom: 1.5rem;
+  font-size: 1.25rem; color: var(--c-gold); margin-bottom: 1.2rem;
   animation: fadeInUp 1.2s ease;
 }
-.names-block { margin: 1rem 0 1.5rem; animation: fadeInUp 1.4s ease; }
-.names-block .name { font-size: 3rem; font-weight: bold; color: var(--c-light); text-shadow: 0 2px 15px rgba(0,0,0,0.4); }
-.names-block .heart { font-size: 1.8rem; color: var(--c-gold); margin: 0 0.8rem; display: inline-block; animation: heartBeat 1.5s infinite; }
+.names-block { margin: 0.8rem 0 1.2rem; animation: fadeInUp 1.4s ease; }
+.names-block .name { font-size: 3.2rem; font-weight: bold; color: var(--c-light); text-shadow: 0 2px 15px rgba(0,0,0,0.4); }
+.names-block .heart { font-size: 2rem; color: var(--c-gold); margin: 0 0.8rem; display: inline-block; animation: heartBeat 1.5s infinite; }
 @keyframes heartBeat { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
-.poem { font-size: 1.2rem; color: var(--c-gold); margin: 1rem 0; animation: fadeInUp 1.6s ease; }
-.date-block { margin: 1.5rem 0; animation: fadeInUp 1.8s ease; }
-.date-block .date-main { font-size: 1.4rem; color: var(--c-light); }
-.date-block .date-sub { font-size: 0.95rem; opacity: 0.7; margin-top: 0.3rem; }
-.date-block .date-time { font-size: 1.1rem; color: var(--c-gold); margin-top: 0.5rem; }
+.poem { font-size: 1.3rem; color: var(--c-gold); margin: 0.8rem 0; animation: fadeInUp 1.6s ease; }
+.date-block { margin: 1.2rem 0; animation: fadeInUp 1.8s ease; }
+.date-block .date-main { font-size: 1.5rem; color: var(--c-light); }
+.date-block .date-sub { font-size: 1.05rem; opacity: 0.7; margin-top: 0.3rem; }
+.date-block .date-time { font-size: 1.25rem; color: var(--c-gold); margin-top: 0.5rem; }
+/* 英雄区场地信息 */
+.hero-venue {
+  margin: 0.8rem 0 0.3rem; animation: fadeInUp 1.9s ease;
+  display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
+}
+.hero-venue .hv-name { font-size: 1.15rem; color: var(--c-gold); font-weight: bold; }
+.hero-venue .hv-addr { font-size: 0.85rem; opacity: 0.65; max-width: 280px; }
+.hero-venue .hv-nav {
+  margin-top: 0.4rem; padding: 0.35rem 1.2rem; border: 1px solid var(--c-gold);
+  border-radius: 20px; background: rgba(212,175,55,0.12); color: var(--c-gold);
+  font-size: 0.8rem; cursor: pointer; font-family: inherit; transition: all 0.2s;
+}
+.hero-venue .hv-nav:hover { background: rgba(212,175,55,0.3); transform: scale(1.03); }
 /* 倒计时 */
-.countdown-block { margin: 1.5rem 0; animation: fadeInUp 2s ease; }
-.countdown-title { font-size: 0.9rem; opacity: 0.7; margin-bottom: 0.8rem; text-align: center; }
+.countdown-block { margin: 1.2rem 0; animation: fadeInUp 2s ease; }
+.countdown-title { font-size: 1rem; opacity: 0.7; margin-bottom: 0.6rem; text-align: center; }
 .countdown-grid { display: flex; justify-content: center; gap: 0.6rem; }
 .countdown-box {
   background: rgba(255,255,255,0.12); backdrop-filter: blur(10px);
   border: 1px solid rgba(212,175,55,0.3);
-  border-radius: 10px; padding: 0.6rem 0.3rem; min-width: 60px; text-align: center;
+  border-radius: 10px; padding: 0.5rem 0.3rem; min-width: 58px; text-align: center;
 }
-.countdown-box .num { font-size: 1.6rem; font-weight: bold; color: var(--c-gold); }
-.countdown-box .label { font-size: 0.65rem; opacity: 0.7; margin-top: 0.1rem; }
+.countdown-box .num { font-size: 1.7rem; font-weight: bold; color: var(--c-gold); }
+.countdown-box .label { font-size: 0.7rem; opacity: 0.7; margin-top: 0.1rem; }
 /* 分隔 */
-.scroll-hint { margin-top: 2rem; font-size: 0.8rem; opacity: 0.5; animation: bounce 2s infinite; }
+.scroll-hint { margin-top: 1.5rem; font-size: 0.9rem; opacity: 0.5; animation: bounce 2s infinite; }
 @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
 /* 通用 section */
-.section { padding: 3rem 1.5rem; text-align: center; }
-.section-header { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 1.5rem; }
+.section { padding: 2.2rem 1.5rem; text-align: center; }
+.section-header { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 1.2rem; }
 .header-line { height: 1px; background: linear-gradient(90deg, transparent, var(--c-gold), transparent); flex: 1; max-width: 60px; }
-.section-title { font-size: 1.6rem; color: var(--c-gold); letter-spacing: 2px; }
+.section-title { font-size: 1.75rem; color: var(--c-gold); letter-spacing: 2px; }
 /* 邀请信 */
 .invitation-text {
-  font-size: 1rem; line-height: 2; opacity: 0.9; max-width: 380px; margin: 0 auto 1.5rem;
+  font-size: 1.1rem; line-height: 2; opacity: 0.9; max-width: 380px; margin: 0 auto 1.2rem;
   text-align: justify;
 }
 .invitation-text .highlight { color: var(--c-gold); font-weight: bold; }
-.parents-block { margin-top: 1.5rem; font-size: 1rem; }
-.parents-block .parent-row { margin: 0.3rem 0; }
-.parents-block .parent-label { font-size: 0.8rem; opacity: 0.7; }
-.parents-block .parent-name { color: var(--c-gold); font-weight: bold; margin: 0 0.3rem; }
+.parents-block { margin-top: 1.5rem; font-size: 1.25rem; }
+.parents-block .parent-row { margin: 0.5rem 0; }
+.parents-block .parent-label { font-size: 1rem; opacity: 0.7; }
+.parents-block .parent-name { color: var(--c-gold); font-weight: bold; font-size: 1.5rem; margin: 0 0.4rem; text-shadow: 0 1px 6px rgba(212,175,55,0.4); }
 /* 爱情故事 */
-.story-chapter { margin: 1.5rem 0; animation: fadeInUp 1s ease; }
+.story-chapter { margin: 1.2rem 0; animation: fadeInUp 1s ease; }
 .story-chapter .chapter-num {
-  font-size: 0.8rem; color: var(--c-gold); opacity: 0.5;
+  font-size: 0.85rem; color: var(--c-gold); opacity: 0.5;
   border: 1px solid var(--c-gold); border-radius: 50%;
   width: 30px; height: 30px; line-height: 28px; margin: 0 auto 0.5rem;
 }
-.story-chapter .chapter-title { font-size: 1.2rem; color: var(--c-gold); margin-bottom: 0.5rem; }
-.story-chapter .chapter-content { font-size: 0.95rem; line-height: 1.8; opacity: 0.85; max-width: 350px; margin: 0 auto; }
-.story-signature { margin-top: 1.5rem; font-size: 0.9rem; color: var(--c-gold); opacity: 0.8; }
+.story-chapter .chapter-title { font-size: 1.3rem; color: var(--c-gold); margin-bottom: 0.4rem; }
+.story-chapter .chapter-content { font-size: 1.05rem; line-height: 1.8; opacity: 0.85; max-width: 350px; margin: 0 auto; }
+.story-signature { margin-top: 1.2rem; font-size: 1rem; color: var(--c-gold); opacity: 0.8; }
 /* 婚礼流程 */
 .events-list { max-width: 380px; margin: 0 auto; }
-.event-item { display: flex; align-items: center; gap: 1rem; margin: 1rem 0; text-align: left; }
-.event-time { font-size: 1.3rem; color: var(--c-gold); font-weight: bold; min-width: 60px; }
+.event-item { display: flex; align-items: center; gap: 1rem; margin: 0.8rem 0; text-align: left; }
+.event-time { font-size: 1.4rem; color: var(--c-gold); font-weight: bold; min-width: 60px; }
 .event-info { flex: 1; }
-.event-title { font-size: 1.1rem; color: var(--c-light); }
-.event-desc { font-size: 0.85rem; opacity: 0.7; margin-top: 0.2rem; }
+.event-title { font-size: 1.2rem; color: var(--c-light); }
+.event-desc { font-size: 0.95rem; opacity: 0.7; margin-top: 0.2rem; }
 /* 场地 */
 .venue-card {
   background: rgba(255,255,255,0.08); backdrop-filter: blur(10px);
@@ -694,44 +727,57 @@ body {
 }
 .venue-nav-btn:hover { background: rgba(212,175,55,0.3); transform: scale(1.03); }
 /* RSVP */
-.rsvp-hint { font-size: 0.85rem; opacity: 0.7; margin-bottom: 1rem; }
-.rsvp-form { max-width: 380px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.8rem; }
+.rsvp-hint { font-size: 0.95rem; opacity: 0.7; margin-bottom: 0.8rem; }
+.rsvp-form { max-width: 380px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.7rem; }
 .rsvp-row { display: flex; flex-direction: column; gap: 0.3rem; text-align: left; }
-.rsvp-label { font-size: 0.85rem; color: var(--c-gold); }
+.rsvp-label { font-size: 0.95rem; color: var(--c-gold); }
 .rsvp-select, .rsvp-input, .rsvp-textarea {
   width: 100%; padding: 0.7rem; border: 1px solid rgba(212,175,55,0.3);
   border-radius: 8px; background: rgba(255,255,255,0.08); color: var(--c-light);
-  font-size: 0.95rem; font-family: inherit;
+  font-size: 1rem; font-family: inherit;
 }
 .rsvp-select option { color: #333; }
 .rsvp-textarea { resize: vertical; min-height: 60px; }
+.rsvp-count-row { display: flex; gap: 0.6rem; align-items: stretch; }
+.rsvp-count-input { flex: 1; }
+.rsvp-submit-inline {
+  flex-shrink: 0; padding: 0.7rem 1.2rem; white-space: nowrap;
+}
+.blessing-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
+.blessing-chip {
+  padding: 0.3rem 0.7rem; border: 1px solid rgba(212,175,55,0.4);
+  border-radius: 16px; background: rgba(212,175,55,0.1); color: var(--c-gold);
+  font-size: 0.85rem; cursor: pointer; transition: all 0.2s; user-select: none;
+}
+.blessing-chip:hover { background: rgba(212,175,55,0.3); transform: scale(1.05); }
+.blessing-chip.active { background: var(--c-gold); color: var(--c-primary); border-color: var(--c-gold); }
 .rsvp-submit {
   padding: 0.8rem; border: none; border-radius: 8px;
   background: linear-gradient(135deg, var(--c-primary), var(--c-dark));
-  color: var(--c-gold); font-size: 1.05rem; cursor: pointer;
+  color: var(--c-gold); font-size: 1.1rem; cursor: pointer;
   font-family: inherit; letter-spacing: 2px; transition: transform 0.2s, opacity 0.2s;
   border: 1px solid var(--c-gold);
 }
 .rsvp-submit:hover { transform: scale(1.02); opacity: 0.9; }
-.rsvp-result { text-align: center; margin-top: 1rem; }
+.rsvp-result { text-align: center; margin-top: 0.8rem; }
 /* 页脚 */
-.footer { padding: 3rem 1.5rem 4rem; text-align: center; }
-.footer .footer-names { font-size: 1.3rem; color: var(--c-gold); margin-bottom: 0.5rem; }
-.footer .footer-date { font-size: 0.9rem; opacity: 0.7; }
-.footer .footer-quote { font-size: 1rem; color: var(--c-gold); margin-top: 1rem; opacity: 0.8; }
+.footer { padding: 2.2rem 1.5rem 3rem; text-align: center; }
+.footer .footer-names { font-size: 1.4rem; color: var(--c-gold); margin-bottom: 0.5rem; }
+.footer .footer-date { font-size: 1rem; opacity: 0.7; }
+.footer .footer-quote { font-size: 1.1rem; color: var(--c-gold); margin-top: 0.8rem; opacity: 0.8; }
 /* 音乐按钮 */
 .music-btn {
-  position: fixed; top: 18px; right: 18px; width: 50px; height: 50px;
+  position: fixed; top: 150px; right: 14px; width: 34px; height: 34px;
   border-radius: 50%; background: var(--c-primary);
-  border: 2px solid var(--c-gold); display: flex; align-items: center; justify-content: center;
-  cursor: pointer; font-size: 1.4rem; z-index: 999;
-  box-shadow: 0 2px 15px rgba(0,0,0,0.4); transition: all 0.3s;
+  border: 1.5px solid var(--c-gold); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 0.95rem; z-index: 999;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4); transition: all 0.3s;
   color: var(--c-gold);
 }
 .music-btn:hover { transform: scale(1.1); border-color: #fff; }
 .music-btn.playing { animation: musicSpin 3s linear infinite, musicPulse 2s infinite; }
 @keyframes musicSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-@keyframes musicPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(212,175,55,0.4); } 50% { box-shadow: 0 0 0 12px rgba(212,175,55,0); } }
+@keyframes musicPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(212,175,55,0.4); } 50% { box-shadow: 0 0 0 8px rgba(212,175,55,0); } }
 /* 动画 */
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fadeInScale { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
@@ -761,6 +807,11 @@ ${lanterns}
       ${weekDay ? `<div class="date-sub">${weekDay}</div>` : ''}
       ${lunarStr ? `<div class="date-sub">${lunarStr}</div>` : ''}
       <div class="date-time">${config.weddingTime}</div>
+    </div>
+    <div class="hero-venue">
+      <div class="hv-name">📍 ${config.venue}${config.venueHall ? ' · ' + config.venueHall : ''}</div>
+      <div class="hv-addr">${config.address}</div>
+      <button class="hv-nav" onclick="openMapNav()">点击导航</button>
     </div>
     ${features.countdown ? `
     <div class="countdown-block">
@@ -793,22 +844,6 @@ ${lanterns}
   ${storySection}
 
   ${eventsSection}
-
-  <!-- 场地 -->
-  <section class="section fade-in">
-    <div class="section-header">
-      <span class="header-line"></span>
-      <h2 class="section-title">婚礼地点</h2>
-      <span class="header-line"></span>
-    </div>
-    <div class="venue-card">
-      <div class="venue-name">${config.venue}</div>
-      ${config.venueHall ? `<div class="venue-hall">${config.venueHall}</div>` : ''}
-      <div class="venue-addr">${config.address}</div>
-      ${config.venueDesc ? `<div class="venue-desc-text">${config.venueDesc}</div>` : ''}
-      <button class="venue-nav-btn" onclick="openMapNav()">📍 点击导航</button>
-    </div>
-  </section>
 
   ${rsvpSection}
 
@@ -930,8 +965,13 @@ function fadeAudio(audio, fadeIn, cb) {
 const GUEST_ID = '${guestId}';
 const NAV_URL = '${(config.navUrl || 'https://surl.amap.com/fOExV1w103jX').replace(/'/g, "\\'")}';
 function openMapNav() {
-  // 直接跳转高德短链接，高德会自动处理APP唤起或网页版
   window.open(NAV_URL, '_blank');
+}
+function setBlessing(text) {
+  const ta = document.getElementById('rsvpMessage');
+  ta.value = text;
+  document.querySelectorAll('.blessing-chip').forEach(c => c.classList.remove('active'));
+  event.target.classList.add('active');
 }
 function submitRSVP() {
   const status = document.getElementById('rsvpStatus').value;
@@ -942,7 +982,7 @@ function submitRSVP() {
   fetch('/api/rsvp', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ guestId: GUEST_ID, status, count: parseInt(count)||1, message })
+    body: JSON.stringify({ guestId: GUEST_ID, status, count: count ? parseInt(count) : null, message })
   }).then(r => r.json()).then(() => {
     result.innerHTML = '<span style="color:#d4af37;">✅ 回执已提交，感谢您的回复！</span>';
   }).catch(() => {
@@ -1810,7 +1850,7 @@ export default {
       if (body.guestId) {
         await env.WEDDING_KV.put(`rsvp:${body.guestId}`, JSON.stringify({
           status: body.status,
-          count: body.count || 1,
+          count: body.count || null,
           message: body.message || '',
           timestamp: Date.now(),
         }));
