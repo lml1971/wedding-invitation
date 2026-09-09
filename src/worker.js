@@ -189,15 +189,27 @@ function getInvitationPage(config, guest) {
   // 花瓣动画
   const petalsCanvas = features.petals ? `<canvas id="petals" class="petals-canvas"></canvas>` : '';
 
-  // 灯笼装饰
+  // 灯笼装饰 — 左右对称双喜红灯笼
   const lanterns = features.lanterns ? `
-    <div class="lantern lantern-left">
+    <div class="lantern-wrap lantern-left">
+      <div class="lantern-rope"></div>
+      <div class="lantern-cap"></div>
       <div class="lantern-body"><span class="lantern-char">囍</span></div>
-      <div class="lantern-tassel"></div>
+      <div class="lantern-bottom"></div>
+      <div class="lantern-tassel">
+        <div class="tassel-knot"></div>
+        <div class="tassel-strands"></div>
+      </div>
     </div>
-    <div class="lantern lantern-right">
-      <div class="lantern-body"><span class="lantern-char">喜</span></div>
-      <div class="lantern-tassel"></div>
+    <div class="lantern-wrap lantern-right">
+      <div class="lantern-rope"></div>
+      <div class="lantern-cap"></div>
+      <div class="lantern-body"><span class="lantern-char">囍</span></div>
+      <div class="lantern-bottom"></div>
+      <div class="lantern-tassel">
+        <div class="tassel-knot"></div>
+        <div class="tassel-strands"></div>
+      </div>
     </div>` : '';
 
   // 爱情故事
@@ -303,20 +315,101 @@ body {
 }
 /* 花瓣画布 */
 .petals-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
-/* 灯笼 */
-.lantern { position: fixed; top: 0; z-index: 2; animation: lanternSway 4s ease-in-out infinite; }
-.lantern-left { left: 10px; }
-.lantern-right { right: 10px; animation-delay: 1s; }
-.lantern-body {
-  width: 50px; height: 60px; border-radius: 50%;
-  background: radial-gradient(circle, #ff4444, #cc0000);
-  border: 2px solid var(--c-gold);
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 0 20px rgba(255,68,68,0.5);
+/* 灯笼 — 传统双喜红灯笼 */
+.lantern-wrap {
+  position: fixed; top: 0; z-index: 5;
+  display: flex; flex-direction: column; align-items: center;
+  transform-origin: top center;
+  animation: lanternSway 3.5s ease-in-out infinite;
 }
-.lantern-char { font-size: 1.5rem; color: var(--c-gold); font-weight: bold; }
-.lantern-tassel { width: 2px; height: 20px; background: var(--c-gold); margin: 0 auto; }
-@keyframes lanternSway { 0%,100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+.lantern-left { left: 8px; }
+.lantern-right { right: 8px; animation-delay: 0.8s; }
+.lantern-rope {
+  width: 2px; height: 25px;
+  background: linear-gradient(180deg, var(--c-gold), #b8860b);
+  border-radius: 1px;
+}
+.lantern-cap {
+  width: 44px; height: 8px;
+  background: linear-gradient(180deg, var(--c-gold), #b8860b);
+  border-radius: 4px 4px 2px 2px;
+  margin-bottom: -1px; position: relative; z-index: 2;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.lantern-body {
+  width: 55px; height: 68px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, #ff5050 0%, #e60000 50%, #cc0000 100%);
+  border: 2.5px solid var(--c-gold);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 25px rgba(255,50,50,0.6), inset 0 -8px 15px rgba(0,0,0,0.2);
+  position: relative;
+  overflow: hidden;
+}
+.lantern-body::before {
+  content: ''; position: absolute; top: 10%; left: 50%;
+  width: 30px; height: 20px; transform: translateX(-50%);
+  background: radial-gradient(ellipse, rgba(255,255,255,0.25), transparent 70%);
+  border-radius: 50%;
+}
+.lantern-body::after {
+  content: ''; position: absolute; bottom: 5%; left: 50%;
+  width: 80%; height: 4px; transform: translateX(-50%);
+  background: linear-gradient(90deg, transparent, var(--c-gold), transparent);
+  opacity: 0.4;
+}
+.lantern-char {
+  font-size: 1.6rem; color: var(--c-gold); font-weight: bold;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  position: relative; z-index: 3;
+}
+.lantern-bottom {
+  width: 44px; height: 8px;
+  background: linear-gradient(180deg, #b8860b, var(--c-gold));
+  border-radius: 2px 2px 4px 4px;
+  margin-top: -1px; position: relative; z-index: 2;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.lantern-tassel {
+  display: flex; flex-direction: column; align-items: center;
+  margin-top: 1px;
+}
+.tassel-knot {
+  width: 8px; height: 6px;
+  background: var(--c-gold); border-radius: 50%;
+}
+.tassel-strands {
+  width: 12px; height: 28px;
+  background: linear-gradient(180deg,
+    var(--c-gold) 0%, var(--c-gold) 10%,
+    #d4af37 30%, #c5a028 50%, #b89530 70%, #a08020 100%);
+  border-radius: 0 0 6px 6px;
+  position: relative;
+  animation: tasselSway 3.5s ease-in-out infinite;
+  transform-origin: top center;
+}
+.tassel-strands::before {
+  content: ''; position: absolute; top: 0; left: 50%;
+  width: 1px; height: 100%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.15);
+}
+@keyframes lanternSway {
+  0% { transform: rotate(-6deg); }
+  25% { transform: rotate(0deg); }
+  50% { transform: rotate(6deg); }
+  75% { transform: rotate(0deg); }
+  100% { transform: rotate(-6deg); }
+}
+@keyframes tasselSway {
+  0% { transform: rotate(-4deg); }
+  50% { transform: rotate(4deg); }
+  100% { transform: rotate(-4deg); }
+}
+@media (max-width: 380px) {
+  .lantern-body { width: 45px; height: 56px; }
+  .lantern-cap, .lantern-bottom { width: 36px; }
+  .lantern-char { font-size: 1.3rem; }
+}
 /* 主容器 */
 .container { position: relative; z-index: 3; max-width: 500px; margin: 0 auto; padding: 0; }
 /* 英雄区 */
