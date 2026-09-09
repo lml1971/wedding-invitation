@@ -452,15 +452,15 @@ function getInvitationPage(config, guest, requestUrl) {
         <div class="rsvp-row">
           <label class="rsvp-label">出席人数</label>
           <div class="rsvp-count-row">
-            <input type="number" id="rsvpCount" class="rsvp-input rsvp-count-input" placeholder="请选择或输入人数" min="1" max="6" list="countList" value="">
-            <datalist id="countList">
+            <select id="rsvpCount" class="rsvp-select rsvp-count-input">
+              <option value="">请选择人数</option>
               <option value="1">1人</option>
               <option value="2">2人</option>
               <option value="3">3人</option>
               <option value="4">4人</option>
               <option value="5">5人</option>
               <option value="6">6人</option>
-            </datalist>
+            </select>
             <button class="rsvp-submit rsvp-submit-inline" onclick="submitRSVP()">提交回执</button>
           </div>
         </div>
@@ -628,32 +628,32 @@ body {
   text-align: center;
 }
 .hero .xi-big {
-  font-size: 5.5rem; color: var(--c-gold); margin-bottom: 0.8rem;
+  font-size: clamp(3.5rem, 12vw, 5.5rem); color: var(--c-gold); margin-bottom: 0.8rem;
   text-shadow: 0 0 30px rgba(212,175,55,0.5);
   animation: fadeInScale 1.5s ease;
 }
-.hero .subtitle { font-size: 1.15rem; opacity: 0.8; margin-bottom: 0.5rem; animation: fadeInUp 0.8s ease; }
+.hero .subtitle { font-size: clamp(0.95rem, 3vw, 1.15rem); opacity: 0.8; margin-bottom: 0.5rem; animation: fadeInUp 0.8s ease; }
 .hero h1 {
-  font-size: 2.2rem; color: var(--c-gold); margin-bottom: 1.2rem;
+  font-size: clamp(1.5rem, 5vw, 2.2rem); color: var(--c-gold); margin-bottom: 1.2rem;
   letter-spacing: 3px; animation: fadeInUp 1s ease;
   text-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 .guest-greeting {
-  font-size: 1.25rem; color: var(--c-gold); margin-bottom: 1.2rem;
+  font-size: clamp(1rem, 3.5vw, 1.25rem); color: var(--c-gold); margin-bottom: 1.2rem;
   animation: fadeInUp 1.2s ease;
 }
-.names-block { margin: 0.8rem 0 1.2rem; animation: fadeInUp 1.4s ease; }
-.names-block .name { font-size: 3.2rem; font-weight: bold; color: var(--c-light); text-shadow: 0 2px 15px rgba(0,0,0,0.4); }
-.names-block .heart { font-size: 2rem; color: var(--c-gold); margin: 0 0.8rem; display: inline-block; animation: heartBeat 1.5s infinite; }
+.names-block { margin: 0.8rem 0 1.2rem; animation: fadeInUp 1.4s ease; white-space: nowrap; }
+.names-block .name { font-size: clamp(2rem, 7vw, 2.8rem); font-weight: bold; color: var(--c-light); text-shadow: 0 2px 15px rgba(0,0,0,0.4); }
+.names-block .heart { font-size: clamp(1.3rem, 4vw, 1.8rem); color: var(--c-gold); margin: 0 0.5rem; display: inline-block; animation: heartBeat 1.5s infinite; }
 @keyframes heartBeat { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
-.poem { font-size: 1.3rem; color: var(--c-gold); margin: 0.8rem 0; animation: fadeInUp 1.6s ease; }
+.poem { font-size: clamp(1.05rem, 3vw, 1.3rem); color: var(--c-gold); margin: 0.8rem 0; animation: fadeInUp 1.6s ease; }
 .date-block { margin: 1.2rem 0; animation: fadeInUp 1.8s ease; }
-.date-block .date-main { font-size: 1.5rem; color: var(--c-light); }
-.date-block .date-sub { font-size: 1.05rem; opacity: 0.7; margin-top: 0.3rem; }
-.date-block .date-time { font-size: 1.25rem; color: var(--c-gold); margin-top: 0.5rem; }
+.date-block .date-main { font-size: clamp(1.2rem, 4vw, 1.5rem); color: var(--c-light); }
+.date-block .date-sub { font-size: clamp(0.9rem, 2.5vw, 1.05rem); opacity: 0.7; margin-top: 0.3rem; }
+.date-block .date-time { font-size: clamp(1rem, 3.5vw, 1.25rem); color: var(--c-gold); margin-top: 0.5rem; }
 /* 英雄区小标题 */
 .block-title {
-  font-size: 1rem; color: var(--c-gold); opacity: 0.6; letter-spacing: 2px;
+  font-size: clamp(0.85rem, 2.5vw, 1rem); color: var(--c-gold); opacity: 0.6; letter-spacing: 2px;
   margin-bottom: 0.4rem; position: relative; display: inline-block;
 }
 .block-title::before, .block-title::after {
@@ -666,9 +666,9 @@ body {
   margin: 0.8rem 0 0.3rem; animation: fadeInUp 1.9s ease;
   display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
 }
-.hero-venue .hv-name { font-size: 1.6rem; color: var(--c-gold); font-weight: bold; text-shadow: 0 1px 8px rgba(212,175,55,0.4); letter-spacing: 1px; }
-.hero-venue .hv-hall { font-size: 1.1rem; color: var(--c-gold); opacity: 0.85; }
-.hero-venue .hv-addr { font-size: 0.85rem; opacity: 0.65; max-width: 280px; }
+.hero-venue .hv-name { font-size: clamp(1.2rem, 4.5vw, 1.6rem); color: var(--c-gold); font-weight: bold; text-shadow: 0 1px 8px rgba(212,175,55,0.4); letter-spacing: 1px; }
+.hero-venue .hv-hall { font-size: clamp(0.9rem, 3vw, 1.1rem); color: var(--c-gold); opacity: 0.85; }
+.hero-venue .hv-addr { font-size: clamp(0.8rem, 2.5vw, 0.85rem); opacity: 0.65; max-width: 280px; }
 .hero-venue .hv-nav {
   margin-top: 0.4rem; padding: 0.35rem 1.2rem; border: 1px solid var(--c-gold);
   border-radius: 20px; background: rgba(212,175,55,0.12); color: var(--c-gold);
@@ -677,50 +677,50 @@ body {
 .hero-venue .hv-nav:hover { background: rgba(212,175,55,0.3); transform: scale(1.03); }
 /* 倒计时 */
 .countdown-block { margin: 1.2rem 0; animation: fadeInUp 2s ease; }
-.countdown-title { font-size: 1rem; opacity: 0.7; margin-bottom: 0.6rem; text-align: center; }
+.countdown-title { font-size: clamp(0.85rem, 2.5vw, 1rem); opacity: 0.7; margin-bottom: 0.6rem; text-align: center; }
 .countdown-grid { display: flex; justify-content: center; gap: 0.6rem; }
 .countdown-box {
   background: rgba(255,255,255,0.12); backdrop-filter: blur(10px);
   border: 1px solid rgba(212,175,55,0.3);
   border-radius: 10px; padding: 0.5rem 0.3rem; min-width: 58px; text-align: center;
 }
-.countdown-box .num { font-size: 1.7rem; font-weight: bold; color: var(--c-gold); }
-.countdown-box .label { font-size: 0.7rem; opacity: 0.7; margin-top: 0.1rem; }
+.countdown-box .num { font-size: clamp(1.3rem, 4vw, 1.7rem); font-weight: bold; color: var(--c-gold); }
+.countdown-box .label { font-size: clamp(0.6rem, 1.8vw, 0.7rem); opacity: 0.7; margin-top: 0.1rem; }
 /* 分隔 */
-.scroll-hint { margin-top: 1.5rem; font-size: 0.9rem; opacity: 0.5; animation: bounce 2s infinite; }
+.scroll-hint { margin-top: 1.5rem; font-size: clamp(0.8rem, 2.5vw, 0.9rem); opacity: 0.5; animation: bounce 2s infinite; }
 @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
 /* 通用 section */
 .section { padding: 2.2rem 1.5rem; text-align: center; }
 .section-header { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 1.2rem; }
 .header-line { height: 1px; background: linear-gradient(90deg, transparent, var(--c-gold), transparent); flex: 1; max-width: 60px; }
-.section-title { font-size: 1.75rem; color: var(--c-gold); letter-spacing: 2px; }
+.section-title { font-size: clamp(1.3rem, 4.5vw, 1.75rem); color: var(--c-gold); letter-spacing: 2px; }
 /* 邀请信 */
 .invitation-text {
-  font-size: 1.1rem; line-height: 2; opacity: 0.9; max-width: 380px; margin: 0 auto 1.2rem;
+  font-size: clamp(0.95rem, 2.8vw, 1.1rem); line-height: 2; opacity: 0.9; max-width: 380px; margin: 0 auto 1.2rem;
   text-align: justify;
 }
 .invitation-text .highlight { color: var(--c-gold); font-weight: bold; }
-.parents-block { margin-top: 1.5rem; font-size: 1.25rem; }
+.parents-block { margin-top: 1.5rem; font-size: clamp(1.05rem, 3vw, 1.25rem); }
 .parents-block .parent-row { margin: 0.5rem 0; }
-.parents-block .parent-label { font-size: 1rem; opacity: 0.7; }
-.parents-block .parent-name { color: var(--c-gold); font-weight: bold; font-size: 1.5rem; margin: 0 0.4rem; text-shadow: 0 1px 6px rgba(212,175,55,0.4); }
+.parents-block .parent-label { font-size: clamp(0.85rem, 2.5vw, 1rem); opacity: 0.7; }
+.parents-block .parent-name { color: var(--c-gold); font-weight: bold; font-size: clamp(1.2rem, 3.5vw, 1.5rem); margin: 0 0.4rem; text-shadow: 0 1px 6px rgba(212,175,55,0.4); }
 /* 爱情故事 */
 .story-chapter { margin: 1.2rem 0; animation: fadeInUp 1s ease; }
 .story-chapter .chapter-num {
-  font-size: 0.85rem; color: var(--c-gold); opacity: 0.5;
+  font-size: clamp(0.75rem, 2vw, 0.85rem); color: var(--c-gold); opacity: 0.5;
   border: 1px solid var(--c-gold); border-radius: 50%;
   width: 30px; height: 30px; line-height: 28px; margin: 0 auto 0.5rem;
 }
-.story-chapter .chapter-title { font-size: 1.3rem; color: var(--c-gold); margin-bottom: 0.4rem; }
-.story-chapter .chapter-content { font-size: 1.05rem; line-height: 1.8; opacity: 0.85; max-width: 350px; margin: 0 auto; }
-.story-signature { margin-top: 1.2rem; font-size: 1rem; color: var(--c-gold); opacity: 0.8; }
+.story-chapter .chapter-title { font-size: clamp(1.05rem, 3.5vw, 1.3rem); color: var(--c-gold); margin-bottom: 0.4rem; }
+.story-chapter .chapter-content { font-size: clamp(0.9rem, 2.5vw, 1.05rem); line-height: 1.8; opacity: 0.85; max-width: 350px; margin: 0 auto; }
+.story-signature { margin-top: 1.2rem; font-size: clamp(0.85rem, 2.5vw, 1rem); color: var(--c-gold); opacity: 0.8; }
 /* 婚礼流程 */
 .events-list { max-width: 380px; margin: 0 auto; }
 .event-item { display: flex; align-items: center; gap: 1rem; margin: 0.8rem 0; text-align: left; }
-.event-time { font-size: 1.4rem; color: var(--c-gold); font-weight: bold; min-width: 60px; }
+.event-time { font-size: clamp(1.15rem, 3.5vw, 1.4rem); color: var(--c-gold); font-weight: bold; min-width: 60px; }
 .event-info { flex: 1; }
-.event-title { font-size: 1.2rem; color: var(--c-light); }
-.event-desc { font-size: 0.95rem; opacity: 0.7; margin-top: 0.2rem; }
+.event-title { font-size: clamp(1rem, 3vw, 1.2rem); color: var(--c-light); }
+.event-desc { font-size: clamp(0.8rem, 2.5vw, 0.95rem); opacity: 0.7; margin-top: 0.2rem; }
 /* 场地 */
 .venue-card {
   background: rgba(255,255,255,0.08); backdrop-filter: blur(10px);
@@ -738,14 +738,14 @@ body {
 }
 .venue-nav-btn:hover { background: rgba(212,175,55,0.3); transform: scale(1.03); }
 /* RSVP */
-.rsvp-hint { font-size: 0.95rem; opacity: 0.7; margin-bottom: 0.8rem; }
+.rsvp-hint { font-size: clamp(0.8rem, 2.5vw, 0.95rem); opacity: 0.7; margin-bottom: 0.8rem; }
 .rsvp-form { max-width: 380px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.7rem; }
 .rsvp-row { display: flex; flex-direction: column; gap: 0.3rem; text-align: left; }
-.rsvp-label { font-size: 0.95rem; color: var(--c-gold); }
+.rsvp-label { font-size: clamp(0.8rem, 2.5vw, 0.95rem); color: var(--c-gold); }
 .rsvp-select, .rsvp-input, .rsvp-textarea {
   width: 100%; padding: 0.7rem; border: 1px solid rgba(212,175,55,0.3);
   border-radius: 8px; background: rgba(255,255,255,0.08); color: var(--c-light);
-  font-size: 1rem; font-family: inherit;
+  font-size: clamp(0.85rem, 2.5vw, 1rem); font-family: inherit;
 }
 .rsvp-select option { color: #333; }
 .rsvp-textarea { resize: vertical; min-height: 60px; }
@@ -765,7 +765,7 @@ body {
 .rsvp-submit {
   padding: 0.8rem; border: none; border-radius: 8px;
   background: linear-gradient(135deg, var(--c-primary), var(--c-dark));
-  color: var(--c-gold); font-size: 1.1rem; cursor: pointer;
+  color: var(--c-gold); font-size: clamp(0.9rem, 2.8vw, 1.1rem); cursor: pointer;
   font-family: inherit; letter-spacing: 2px; transition: transform 0.2s, opacity 0.2s;
   border: 1px solid var(--c-gold);
 }
@@ -773,9 +773,9 @@ body {
 .rsvp-result { text-align: center; margin-top: 0.8rem; }
 /* 页脚 */
 .footer { padding: 2.2rem 1.5rem 3rem; text-align: center; }
-.footer .footer-names { font-size: 1.4rem; color: var(--c-gold); margin-bottom: 0.5rem; }
-.footer .footer-date { font-size: 1rem; opacity: 0.7; }
-.footer .footer-quote { font-size: 1.1rem; color: var(--c-gold); margin-top: 0.8rem; opacity: 0.8; }
+.footer .footer-names { font-size: clamp(1.1rem, 3.5vw, 1.4rem); color: var(--c-gold); margin-bottom: 0.5rem; }
+.footer .footer-date { font-size: clamp(0.85rem, 2.5vw, 1rem); opacity: 0.7; }
+.footer .footer-quote { font-size: clamp(0.9rem, 3vw, 1.1rem); color: var(--c-gold); margin-top: 0.8rem; opacity: 0.8; }
 /* 音乐按钮 */
 .music-btn {
   position: fixed; top: 150px; right: 14px; width: 34px; height: 34px;
