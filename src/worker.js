@@ -717,6 +717,14 @@ th { color: #e94560; }
 .hint { font-size: 0.8rem; color: #888; margin-top: 0.3rem; }
 .add-guest-row { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
 .add-guest-row input { flex: 1; padding: 0.6rem; border: 1px solid #333; border-radius: 6px; background: #0f3460; color: #fff; font-size: 0.9rem; }
+.event-edit-row { display: flex; gap: 0.4rem; margin-bottom: 0.5rem; align-items: center; flex-wrap: wrap; }
+.event-edit-row input { padding: 0.5rem; border: 1px solid #333; border-radius: 6px; background: #0f3460; color: #fff; font-size: 0.85rem; }
+.event-edit-row .evt-time { width: 80px; }
+.event-edit-row .evt-title { flex: 1; min-width: 120px; }
+.event-edit-row .evt-desc { flex: 1; min-width: 100px; }
+.story-edit-row { margin-bottom: 0.8rem; padding: 0.8rem; border: 1px solid #333; border-radius: 8px; background: #0d2a4a; }
+.story-edit-row .story-title { width: 100%; padding: 0.5rem; border: 1px solid #333; border-radius: 6px; background: #0f3460; color: #fff; font-size: 0.9rem; margin-bottom: 0.4rem; }
+.story-edit-row .story-content { width: 100%; padding: 0.5rem; border: 1px solid #333; border-radius: 6px; background: #0f3460; color: #fff; font-size: 0.85rem; resize: vertical; min-height: 50px; margin-bottom: 0.4rem; }
 </style>
 </head>
 <body>
@@ -734,6 +742,7 @@ th { color: #e94560; }
     <button class="nav-btn" data-panel="assets" onclick="showPanel('assets')">资源设置</button>
     <button class="nav-btn" data-panel="features" onclick="showPanel('features')">功能开关</button>
     <button class="nav-btn" data-panel="text" onclick="showPanel('text')">文案编辑</button>
+    <button class="nav-btn" data-panel="events" onclick="showPanel('events')">流程故事</button>
     <button class="nav-btn" data-panel="guests" onclick="showPanel('guests')">宾客管理</button>
     <button class="nav-btn" data-panel="links" onclick="showPanel('links')">专属链接</button>
     <button class="nav-btn" data-panel="stats" onclick="showPanel('stats')">统计</button>
@@ -800,6 +809,20 @@ th { color: #e94560; }
     <div class="form-group"><label>浪漫诗句（页脚）</label><input id="cfg-quote" type="text" placeholder="如：愿有岁月可回首，且以深情共白头"></div>
     <div class="form-group"><label>正式邀请信（留空使用默认模板）</label><textarea id="cfg-invitationText" placeholder="留空将自动生成：吾儿 [新郎] 与 [新娘] 女士..."></textarea></div>
     <button class="btn btn-primary" onclick="saveConfig()">保存文案</button>
+  </div>
+
+  <div class="panel" id="panel-events">
+    <h2>婚礼流程</h2>
+    <p class="hint" style="margin-bottom:1rem;">添加婚礼当天的流程安排，每项包含时间、名称和描述</p>
+    <div id="eventsList"></div>
+    <button class="btn btn-gold" onclick="addEventItem()">+ 添加流程项</button>
+    <h2 style="margin-top:2rem;">爱情故事</h2>
+    <p class="hint" style="margin-bottom:1rem;">添加你们的爱情故事章节，每章包含标题和内容</p>
+    <div id="storyList"></div>
+    <button class="btn btn-gold" onclick="addStoryItem()">+ 添加故事章节</button>
+    <div style="margin-top:1.5rem;">
+      <button class="btn btn-primary" onclick="saveConfig()">保存流程与故事</button>
+    </div>
   </div>
 
   <div class="panel" id="panel-guests">
@@ -939,6 +962,10 @@ function loadConfig() {
     document.getElementById('feat-events').checked = f.events !== false;
     document.getElementById('feat-petals').checked = f.petals !== false;
     document.getElementById('feat-lanterns').checked = f.lanterns !== false;
+    // 渲染流程列表
+    renderEvents(data.events || []);
+    // 渲染故事列表
+    renderStory(data.story || []);
   }).catch(() => showToast('加载配置失败', 'error'));
 }
 
@@ -977,7 +1004,9 @@ function saveConfig() {
       events: document.getElementById('feat-events').checked,
       petals: document.getElementById('feat-petals').checked,
       lanterns: document.getElementById('feat-lanterns').checked,
-    }
+    },
+    events: collectEvents(),
+    story: collectStory(),
   };
   Object.assign(currentConfig, config);
   fetch('/api/config', {
@@ -987,6 +1016,109 @@ function saveConfig() {
   }).then(r => r.json()).then(() => {
     showToast('保存成功', 'success');
   }).catch(() => showToast('保存失败', 'error'));
+}
+
+// ================== 婚礼流程编辑 ==================
+function renderEvents(events) {
+  const list = document.getElementById('eventsList');
+  if (!list) return;
+  if (!events.length) events = [{ time: '', title: '', desc: '' }];
+  list.innerHTML = events.map(function(e, i) {
+    return '<div class="event-edit-row" data-idx="' + i + '">'
+      + '<input type="time" class="evt-time" value="' + (e.time || '') + '" placeholder="时间">'
+      + '<input type="text" class="evt-title" value="' + (e.title || '') + '" placeholder="流程名称（如：婚礼仪式）">'
+      + '<input type="text" class="evt-desc" value="' + (e.desc || '') + '" placeholder="描述（选填）">'
+      + '<button class="btn btn-danger" onclick="removeEventItem(' + i + ')">删除</button>'
+      + '</div>';
+  }).join('');
+}
+
+function addEventItem() {
+  const list = document.getElementById('eventsList');
+  const i = list.children.length;
+  const div = document.createElement('div');
+  div.className = 'event-edit-row';
+  div.setAttribute('data-idx', i);
+  div.innerHTML = '<input type="time" class="evt-time" value="" placeholder="时间">'
+    + '<input type="text" class="evt-title" value="" placeholder="流程名称">'
+    + '<input type="text" class="evt-desc" value="" placeholder="描述（选填）">'
+    + '<button class="btn btn-danger" onclick="removeEventItem(' + i + ')">删除</button>';
+  list.appendChild(div);
+}
+
+function removeEventItem(idx) {
+  const list = document.getElementById('eventsList');
+  const rows = list.querySelectorAll('.event-edit-row');
+  // 从后往前删，避免索引偏移
+  if (rows[idx]) rows[idx].remove();
+  // 重新编号
+  var rows_after = list.querySelectorAll('.event-edit-row');
+  rows_after.forEach(function(row, i) {
+    row.setAttribute('data-idx', i);
+    var btn = row.querySelector('button');
+    if (btn) btn.setAttribute('onclick', 'removeEventItem(' + i + ')');
+  });
+}
+
+function collectEvents() {
+  const rows = document.querySelectorAll('#eventsList .event-edit-row');
+  const events = [];
+  rows.forEach(function(row) {
+    var time = row.querySelector('.evt-time').value.trim();
+    var title = row.querySelector('.evt-title').value.trim();
+    var desc = row.querySelector('.evt-desc').value.trim();
+    if (title) events.push({ time: time, title: title, desc: desc });
+  });
+  return events;
+}
+
+// ================== 爱情故事编辑 ==================
+function renderStory(story) {
+  const list = document.getElementById('storyList');
+  if (!list) return;
+  if (!story.length) story = [{ title: '', content: '' }];
+  list.innerHTML = story.map(function(s, i) {
+    return '<div class="story-edit-row" data-idx="' + i + '">'
+      + '<input type="text" class="story-title" value="' + (s.title || '') + '" placeholder="章节标题（如：初遇）">'
+      + '<textarea class="story-content" placeholder="章节内容">' + (s.content || '') + '</textarea>'
+      + '<button class="btn btn-danger" onclick="removeStoryItem(' + i + ')">删除</button>'
+      + '</div>';
+  }).join('');
+}
+
+function addStoryItem() {
+  const list = document.getElementById('storyList');
+  const i = list.children.length;
+  const div = document.createElement('div');
+  div.className = 'story-edit-row';
+  div.setAttribute('data-idx', i);
+  div.innerHTML = '<input type="text" class="story-title" value="" placeholder="章节标题">'
+    + '<textarea class="story-content" placeholder="章节内容"></textarea>'
+    + '<button class="btn btn-danger" onclick="removeStoryItem(' + i + ')">删除</button>';
+  list.appendChild(div);
+}
+
+function removeStoryItem(idx) {
+  var list = document.getElementById('storyList');
+  var rows = list.querySelectorAll('.story-edit-row');
+  if (rows[idx]) rows[idx].remove();
+  var rows_after = list.querySelectorAll('.story-edit-row');
+  rows_after.forEach(function(row, i) {
+    row.setAttribute('data-idx', i);
+    var btn = row.querySelector('button');
+    if (btn) btn.setAttribute('onclick', 'removeStoryItem(' + i + ')');
+  });
+}
+
+function collectStory() {
+  var rows = document.querySelectorAll('#storyList .story-edit-row');
+  var story = [];
+  rows.forEach(function(row) {
+    var title = row.querySelector('.story-title').value.trim();
+    var content = row.querySelector('.story-content').value.trim();
+    if (title) story.push({ title: title, content: content });
+  });
+  return story;
 }
 
 // ================== 宾客管理 ==================
