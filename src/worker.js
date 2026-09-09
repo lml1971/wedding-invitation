@@ -1865,6 +1865,18 @@ async function getConfig(env) {
     return DEFAULT_CONFIG;
   }
   const parsed = JSON.parse(config);
+  // 配置版本迁移：强制更新地址相关字段为最新值
+  const cfgVersion = parsed._cfgVersion || 0;
+  if (cfgVersion < 2) {
+    // v2: 更新场地地址和导航链接
+    parsed.venue = DEFAULT_CONFIG.venue;
+    parsed.venueHall = DEFAULT_CONFIG.venueHall;
+    parsed.address = DEFAULT_CONFIG.address;
+    parsed.navKeyword = DEFAULT_CONFIG.navKeyword;
+    if (!parsed.navUrl) parsed.navUrl = DEFAULT_CONFIG.navUrl;
+    parsed._cfgVersion = 2;
+    await env.WEDDING_KV.put('config', JSON.stringify(parsed));
+  }
   // 合并默认值（确保新增字段有值）
   return { ...DEFAULT_CONFIG, ...parsed, features: { ...DEFAULT_CONFIG.features, ...(parsed.features || {}) }, text: { ...DEFAULT_CONFIG.text, ...(parsed.text || {}) } };
 }
