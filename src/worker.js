@@ -29,11 +29,12 @@ const DEFAULT_CONFIG = {
   weddingDate: '2026-10-01',   // 【可配置】婚礼日期 YYYY-MM-DD
   weddingTime: '11:30',        // 【可配置】婚礼时间 HH:MM
   lunarDate: '',               // 【可配置】农历日期（留空则自动从公历计算）
-  venue: '忻州市忻府区鑫禧堂礼宴中心',  // 【可配置】婚礼地点/酒店名称
+  venue: '鑫禧堂礼宴中心',       // 【可配置】婚礼地点/酒店名称
   venueHall: '水晶主题厅',      // 【可配置】宴会厅名称
-  address: '忻州市忻府区',       // 【可配置】详细地址
+  address: '忻府区开发区梨花街以南、同德路以西综合楼',  // 【可配置】详细地址
   venueDesc: '',               // 【可配置】场地描述
-  navKeyword: '鑫禧堂礼宴中心 忻州',  // 【可配置】地图导航搜索关键词
+  navKeyword: '鑫禧堂礼宴中心',  // 【可配置】地图导航搜索关键词
+  navUrl: 'https://surl.amap.com/fOExV1w103jX',  // 【可配置】导航短链接（高德短链接，后台可修改）
 
   // --- CF文件库资源 ---
   // 【可配置】背景图URL（从CF文件库调用，留空则使用默认渐变背景）
@@ -924,38 +925,10 @@ function fadeAudio(audio, fadeIn, cb) {
 
 // ================== RSVP ==================
 const GUEST_ID = '${guestId}';
-const NAV_KEYWORD = '${(config.navKeyword || config.venue || '').replace(/'/g, "\\'")}';
+const NAV_URL = '${(config.navUrl || 'https://surl.amap.com/fOExV1w103jX').replace(/'/g, "\\'")}';
 function openMapNav() {
-  var kw = encodeURIComponent(NAV_KEYWORD);
-  var ua = navigator.userAgent.toLowerCase();
-  var amapWeb = 'https://uri.amap.com/search?keyword=' + kw;
-  var baiduWeb = 'https://map.baidu.com/?query=' + kw + '&from=webmap';
-  if (ua.indexOf('micromessenger') > -1) {
-    // 微信内置浏览器 — 高德网页版（无需API Key，微信内可正常打开）
-    window.location.href = amapWeb;
-  } else if (ua.indexOf('android') > -1) {
-    // 安卓 — 尝试唤起高德APP，1.5秒后未跳转则fallback到网页版
-    var loaded = false;
-    var start = Date.now();
-    window.location.href = 'androidamap://search?keyword=' + kw;
-    setTimeout(function() {
-      // 如果页面还可见说明APP没唤起，跳网页版
-      if (!loaded && Date.now() - start < 3000) window.location.href = amapWeb;
-    }, 1500);
-    document.addEventListener('visibilitychange', function() { loaded = true; }, { once: true });
-  } else if (ua.indexOf('iphone') > -1 || ua.indexOf('ipad') > -1) {
-    // iOS — 尝试唤起高德APP，fallback到网页版
-    var loaded2 = false;
-    var start2 = Date.now();
-    window.location.href = 'iosamap://search?keyword=' + kw;
-    setTimeout(function() {
-      if (!loaded2 && Date.now() - start2 < 3000) window.location.href = amapWeb;
-    }, 1500);
-    document.addEventListener('visibilitychange', function() { loaded2 = true; }, { once: true });
-  } else {
-    // 桌面 — 百度地图网页版
-    window.open(baiduWeb, '_blank');
-  }
+  // 直接跳转高德短链接，高德会自动处理APP唤起或网页版
+  window.open(NAV_URL, '_blank');
 }
 function submitRSVP() {
   const status = document.getElementById('rsvpStatus').value;
@@ -1085,7 +1058,8 @@ th { color: #e94560; }
     <div class="form-group"><label>宴会厅名称</label><input id="cfg-venueHall" type="text" placeholder="如：水晶主题厅"></div>
     <div class="form-group"><label>详细地址</label><input id="cfg-address" type="text"></div>
     <div class="form-group"><label>场地描述</label><input id="cfg-venueDesc" type="text" placeholder="选填"></div>
-    <div class="form-group"><label>地图导航关键词</label><input id="cfg-navKeyword" type="text" placeholder="如：鑫禧堂礼宴中心 忻州"><div class="hint">用于导航按钮搜索酒店位置，建议填写酒店名称+城市</div></div>
+    <div class="form-group"><label>地图导航关键词</label><input id="cfg-navKeyword" type="text" placeholder="如：鑫禧堂礼宴中心"><div class="hint">用于地图搜索的关键词</div></div>
+    <div class="form-group"><label>导航短链接</label><input id="cfg-navUrl" type="text" placeholder="https://surl.amap.com/xxx"><div class="hint">高德短链接，导航按钮直接跳转此链接（优先于关键词）</div></div>
     <div class="form-group"><label>请帖模板</label><select id="cfg-template"><option value="classic">经典红金</option><option value="elegant">优雅暗金</option><option value="modern">现代粉青</option></select></div>
     <button class="btn btn-primary" onclick="saveConfig()">保存配置</button>
   </div>
@@ -1402,6 +1376,7 @@ function loadConfig() {
     document.getElementById('cfg-address').value = data.address || '';
     document.getElementById('cfg-venueDesc').value = data.venueDesc || '';
     document.getElementById('cfg-navKeyword').value = data.navKeyword || '';
+    document.getElementById('cfg-navUrl').value = data.navUrl || '';
     document.getElementById('cfg-template').value = data.template || 'classic';
     document.getElementById('cfg-bgImage').value = data.bgImage || '';
     document.getElementById('cfg-bgMusic').value = data.bgMusic || '';
@@ -1449,6 +1424,7 @@ function saveConfig() {
     address: document.getElementById('cfg-address').value,
     venueDesc: document.getElementById('cfg-venueDesc').value,
     navKeyword: document.getElementById('cfg-navKeyword').value,
+    navUrl: document.getElementById('cfg-navUrl').value,
     template: document.getElementById('cfg-template').value,
     bgImage: document.getElementById('cfg-bgImage').value,
     bgMusic: document.getElementById('cfg-bgMusic').value,
