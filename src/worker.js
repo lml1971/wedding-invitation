@@ -1265,6 +1265,51 @@ function autoFillLunar() {
   if (auto) { lunarField.value = auto; showToast('农历已自动填入：' + auto, 'success'); }
 }
 
+// ================== 婚礼时间与喜宴流程联动 ==================
+
+/** 判断流程项是否为"喜宴"类项目 */
+function isBanquetEvent(title) {
+  if (!title) return false;
+  var t = title.trim();
+  return t === '喜宴' || t === '婚宴' || t === '宴席' || t === '婚宴开始' || t.indexOf('宴') > -1;
+}
+
+/** 基础配置婚礼时间变更 → 同步到流程中的喜宴时间 */
+function syncWeddingTimeToEvents() {
+  var newTime = document.getElementById('cfg-time').value;
+  if (!newTime) return;
+  var rows = document.querySelectorAll('#eventsList .event-edit-row');
+  var synced = false;
+  rows.forEach(function(row) {
+    var titleEl = row.querySelector('.evt-title');
+    var timeEl = row.querySelector('.evt-time');
+    if (titleEl && timeEl && isBanquetEvent(titleEl.value)) {
+      timeEl.value = newTime;
+      synced = true;
+    }
+  });
+  if (synced) showToast('喜宴时间已同步为 ' + newTime, 'success');
+}
+
+/** 流程中喜宴时间变更 → 同步到基础配置婚礼时间 */
+function syncEventTimeToWedding() {
+  var rows = document.querySelectorAll('#eventsList .event-edit-row');
+  rows.forEach(function(row) {
+    var titleEl = row.querySelector('.evt-title');
+    var timeEl = row.querySelector('.evt-time');
+    if (titleEl && timeEl && isBanquetEvent(titleEl.value)) {
+      var t = timeEl.value;
+      if (t) {
+        var weddingTimeEl = document.getElementById('cfg-time');
+        if (weddingTimeEl.value !== t) {
+          weddingTimeEl.value = t;
+          showToast('婚礼时间已同步为 ' + t, 'success');
+        }
+      }
+    }
+  });
+}
+
 // ================== 配置管理 ==================
 function loadConfig() {
   fetch('/api/config').then(r => r.json()).then(data => {
@@ -1276,6 +1321,7 @@ function loadConfig() {
     document.getElementById('cfg-date').value = data.weddingDate || '';
     document.getElementById('cfg-date').onchange = autoFillLunar;
     document.getElementById('cfg-time').value = data.weddingTime || '';
+    document.getElementById('cfg-time').onchange = syncWeddingTimeToEvents;
     document.getElementById('cfg-lunar').value = data.lunarDate || '';
     document.getElementById('cfg-venue').value = data.venue || '';
     document.getElementById('cfg-venueHall').value = data.venueHall || '';
@@ -1369,8 +1415,8 @@ function renderEvents(events) {
   if (!events.length) events = [{ time: '', title: '', desc: '' }];
   list.innerHTML = events.map(function(e, i) {
     return '<div class="event-edit-row" data-idx="' + i + '">'
-      + '<input type="time" class="evt-time" value="' + (e.time || '') + '" placeholder="时间">'
-      + '<input type="text" class="evt-title" value="' + (e.title || '') + '" placeholder="流程名称（如：婚礼仪式）">'
+      + '<input type="time" class="evt-time" value="' + (e.time || '') + '" placeholder="时间" onchange="syncEventTimeToWedding()">'
+      + '<input type="text" class="evt-title" value="' + (e.title || '') + '" placeholder="流程名称（如：婚礼仪式）" onchange="syncEventTimeToWedding()">'
       + '<input type="text" class="evt-desc" value="' + (e.desc || '') + '" placeholder="描述（选填）">'
       + '<button class="btn btn-danger" onclick="removeEventItem(' + i + ')">删除</button>'
       + '</div>';
@@ -1383,8 +1429,8 @@ function addEventItem() {
   const div = document.createElement('div');
   div.className = 'event-edit-row';
   div.setAttribute('data-idx', i);
-  div.innerHTML = '<input type="time" class="evt-time" value="" placeholder="时间">'
-    + '<input type="text" class="evt-title" value="" placeholder="流程名称">'
+  div.innerHTML = '<input type="time" class="evt-time" value="" placeholder="时间" onchange="syncEventTimeToWedding()">'
+    + '<input type="text" class="evt-title" value="" placeholder="流程名称" onchange="syncEventTimeToWedding()">'
     + '<input type="text" class="evt-desc" value="" placeholder="描述（选填）">'
     + '<button class="btn btn-danger" onclick="removeEventItem(' + i + ')">删除</button>';
   list.appendChild(div);
